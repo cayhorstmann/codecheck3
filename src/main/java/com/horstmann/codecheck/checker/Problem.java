@@ -712,7 +712,12 @@ whitespace2 pseudocode2
         for (Map.Entry<Path, byte[]> entry : useFiles.entrySet()) {
             Path path = entry.getKey();
             if (language.isSource(path) && !solutionFiles.containsKey(path) && !annotations.getHidden().contains(path) || isTextFile(path)) {
-                String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
+                String contents;
+                if (Util.isText(entry.getValue())) {
+                    contents = new String(entry.getValue(), StandardCharsets.UTF_8);
+                } else {
+                    contents = "(binary)";
+                }
                 data.useFiles.put(path.toString(), language.isSource(path) ? removePseudoComments(contents) : contents);
             }
         }
