@@ -808,20 +808,27 @@ window.addEventListener('load', async function () {
     
       for (let i = 0; i < useFileNames.length; i++) {
         let fileName = useFileNames[i]
-        
+        let text = setup.useFiles[fileName].replace(/\r?\n$/, '')
+
         let editorDiv = document.createElement('div')
         editorDiv.classList.add('editor')
-        let text = setup.useFiles[fileName].replace(/\r?\n$/, '')
         editorDiv.textContent = text
         let editor = ace.edit(editorDiv)
-        
         let fileObj = document.createElement('div')
         fileObj.classList.add('codecheckUseFile')
         let filenameDiv = document.createElement('div')
         filenameDiv.classList.add('codecheckFilename')
         filenameDiv.textContent = directoryPrefix + fileName
+
         fileObj.appendChild(filenameDiv)
-        fileObj.appendChild(editorDiv)
+        if (text.includes("data:image/")) {
+          let imgDiv = document.createElement('img')
+          imgDiv.src = text
+          imgDiv.classList.add("img")
+          fileObj.appendChild(imgDiv)
+        } else {
+          fileObj.appendChild(editorDiv)
+        }
         setupAceEditor(editorDiv, editor, fileName, /*readonly*/ true)
         form.appendChild(fileObj)
 

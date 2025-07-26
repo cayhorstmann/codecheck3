@@ -711,8 +711,19 @@ whitespace2 pseudocode2
         data.useFiles = new LinkedHashMap<String, String>();
         for (Map.Entry<Path, byte[]> entry : useFiles.entrySet()) {
             Path path = entry.getKey();
-            if (language.isSource(path) && !solutionFiles.containsKey(path) && !annotations.getHidden().contains(path) || isTextFile(path)) {
-                String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
+            String contents;
+            if (language.isSource(path) && !solutionFiles.containsKey(path)
+                    && !annotations.getHidden().contains(path)
+                    || isTextFile(path) || Util.isImageFilename(path.toString())) {
+                        
+                if (Util.isText(entry.getValue())) {
+                    contents = new String(entry.getValue(), StandardCharsets.UTF_8);
+                } else if (Util.isImageFilename(path.toString())) {
+                    contents = "data:image/" + Util.extension(path) + ";base64," +
+                                Base64.getEncoder().encodeToString(entry.getValue());
+                } else {
+                    contents = "(binary)";
+                }
                 data.useFiles.put(path.toString(), language.isSource(path) ? removePseudoComments(contents) : contents);
             }
         }
