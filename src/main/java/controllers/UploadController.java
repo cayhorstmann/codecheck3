@@ -45,7 +45,6 @@ public class UploadController {
                 }
                 n++;
             }
-
             String response = uploadService.checkAndSaveProblem(HttpUtil.prefix(uriInfo, headers),
                     problem, problemFiles, editKey);
             return Response.ok(response).build();
@@ -87,6 +86,37 @@ public class UploadController {
             return Response.ok(response).type(MediaType.TEXT_HTML).build();
         } catch (Exception ex) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(Util.getStackTrace(ex)).build();
+        }
+    }
+
+    @POST
+    @jakarta.ws.rs.Path("/sendHello")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response sendHello(@FormParam("message") String greeting) {
+        System.out.println("Received from client: " + greeting);
+        return Response.ok("Goodbye!").build();
+    }
+
+    @POST
+    @jakarta.ws.rs.Path("/codecheck")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response codecheck(Map<String, String> params) {
+        try {
+            Map<Path, byte[]> problemFiles = new TreeMap<>();
+            for (Map.Entry<String, String> i : params.entrySet()) {
+                String filename = i.getKey();
+                if (filename.trim().length() > 0) {
+                    String contents = i.getValue().replaceAll("\r\n", "\n");
+                    problemFiles.put(Path.of(filename), contents.getBytes(StandardCharsets.UTF_8));
+                }
+            }
+            String response = uploadService.checkProblem(problemFiles);
+            return Response.ok(response).build();
+        } catch (Exception ex) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(Util.getStackTrace(ex)).build();
         }
     }
 }

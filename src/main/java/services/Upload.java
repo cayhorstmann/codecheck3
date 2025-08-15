@@ -152,6 +152,17 @@ public class Upload {
         result.append(part2.formatted(problem, editKey));
         return result.toString();
     }
+
+    public String checkProblem(Map<Path, byte[]> problemFiles)
+        throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
+            
+        String report = codeCheck.checkAndSave(null, problemFiles);
+            String run = Base64.getEncoder().encodeToString(report.getBytes(StandardCharsets.UTF_8));
+            String response =
+                    "<br/><iframe height=\"400\" style=\"width: 90%; margin: 2em;\" src=\"data:text/html;base64," + run
+                            + "\"></iframe>";
+        return response;
+    }
     
     private String part1 = """
 <?xml version="1.0" encoding="UTF-8" ?>

@@ -9,12 +9,20 @@
 <body style="font-family: sans-serif;">
 <form method="post" action="../uploadFiles">
     <div>
-    <p>File name: <input name="filename1" size="25" type="text"/></p>
-    <p><textarea name="contents1" rows="24" cols="80"></textarea></p>
+    <p>File name: <input id="filename1" name="filename1" size="25" type="text"/></p>
+    <p><textarea id="contents1" name="contents1" rows="24" cols="80"></textarea></p>
     <div id="addfilecontainer">Need more files? <button id="addfile" type="button">Add file</button></div>
     <div><input type="submit" value="Submit files"/></div>
     </div>
 </form>
+
+<form method="post" action="../sendHello">
+  <input type="hidden" name="message" value="Hello" />
+  <input type="submit" value="Send Hello" />
+</form>
+
+<button id="codecheck" type="button">CodeCheck</button>
+
 <hr/>
 <form method="post" action="../uploadProblem" enctype="multipart/form-data">
 <p>Alternatively, upload a zip file: <input name="file" id="file" type="file"/></p>
@@ -47,6 +55,39 @@ document.getElementById('upload').disabled = document.getElementById('file').fil
 document.getElementById('file').addEventListener('change', function() {
     document.getElementById('upload').disabled = document.getElementById('file').files.length === 0
 })
+
+document.getElementById("codecheck").addEventListener("click", function() {
+    let fileIndex = 1;
+    const fileMap = new Map()
+    while(document.getElementById("filename" + fileIndex)) {
+      const name = document.getElementById("filename" + fileIndex).value
+      const content = document.getElementById("contents" + fileIndex).value
+      fileMap.set(name, content)
+      fileIndex++
+    }
+
+    const jsonPayload = Object.fromEntries(fileMap)
+    fetch("../codecheck", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify(jsonPayload, null, 2)
+    })
+    .then(res => res.text())
+    .then(html => {
+      const iframe = document.createElement('iframe');
+      iframe.height = 400;
+      iframe.style.width = '90%';
+      iframe.style.margin = '2em';
+
+      iframe.srcdoc = html;
+      document.body.appendChild(iframe);
+    })
+});
+
+
 </script>
 </body>
 </html>
