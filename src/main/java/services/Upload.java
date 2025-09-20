@@ -12,6 +12,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import javax.script.ScriptException;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horstmann.codecheck.checker.Util;
 
 @ApplicationScoped
@@ -60,6 +62,19 @@ public class Upload {
 
         return fixedProblemFiles;
     }
+
+    private String renderFileBlock(int index, String key, byte[] data) {
+        if (Util.isText(data)) {
+            String contents = new String(data, StandardCharsets.UTF_8);
+            return filePart.formatted(index, index, index, key, index, index, index, contents);
+        } else if (Util.isImageFilename(key)) {
+            return imageFilePart.formatted(index, index, index, key, index, index, index, Util.imageData(key, data));
+        } else {
+            return binaryFilePart.formatted(index, index, index, key, index, index, index);
+        }
+    }
+
+
     
     public String checkAndSaveProblem(String requestPrefix, String problem, byte[] problemZip, String editKey)
             throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
@@ -126,31 +141,56 @@ public class Upload {
     /**
      * Produces a form for editing a problem.
      */
-    public String editProblem(String prefix, String problem, String editKey) throws IOException {
-        Map<Path, byte[]> problemFiles = checkEditKey(problem, editKey);
-               
-        String problemURL = createProblemURL(prefix, problem, problemFiles);
+    public String editProblem(String prefix, String problemID, String editKey) throws IOException {
+        Map<Path, byte[]> problemFilesMap = checkEditKey(problemID, editKey);
+
+        String problemURL = createProblemURL(prefix, problemID, problemFilesMap);
         StringBuilder result = new StringBuilder();
-        result.append(part1.formatted(problemURL, problemURL, problem, editKey));
-        int i = 0;
-        for (Map.Entry<Path, byte[]> entries : problemFiles.entrySet()) {
-            Path p = entries.getKey();
+        result.append(part1.formatted(problemURL, problemURL, problemID, editKey));
+
+        int index = 1;
+        for (Map.Entry<Path, byte[]> entry : problemFilesMap.entrySet()) {
+            Path p = entry.getKey();
             if (!List.of("_outputs", "edit.key").contains(p.getName(0).toString())) {
-            	i++;
-            	String name = p.toString();
-                if (Util.isText(entries.getValue())) {
-                    String contents = new String(entries.getValue(), StandardCharsets.UTF_8);
-                    result.append(filePart.formatted(i, i, i, name, i, i, i, contents));
-                } else if (Util.isImageFilename(entries.getKey().toString())) {
-                    result.append(imageFilePart.formatted(i, i, i, name, i, i, i,
-                            Util.imageData(entries.getKey().toString(), entries.getValue())));
-                } else {
-                    result.append(binaryFilePart.formatted(i, i, i, name, i, i, i));
-                }
+                String key = entry.getKey().toString();
+                byte[] data = entry.getValue();
+                result.append(renderFileBlock(index, key, data));
+                index++;
             }
         }
-        result.append(part2.formatted(problem, editKey));
+        result.append(part2.formatted(problemID, editKey));
         return result.toString();
+    }
+
+
+    public ObjectNode checkProblem(String prefix, Map<Path, byte[]> problemFiles, String problem, String editKey)
+        throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
+        if (problem == null) { // new problem
+    		problem = Util.createPublicUID();
+    		editKey = Util.createPrivateUID();    		            
+    	} else {
+    		checkEditKey(problem, editKey);
+
+            // Add any binary old file that is not deleted
+            Map<Path, byte[]> oldProblemFiles = codeCheck.loadProblem(DEFAULT_REPO, problem);
+            for (Map.Entry<Path, byte[]> entry : oldProblemFiles.entrySet()) {
+                if (problemFiles.containsKey(entry.getKey()) && !Util.isText(entry.getValue())) {
+                    problemFiles.put(entry.getKey(), entry.getValue());
+                }
+            }
+    	}
+        problemFiles.put(Path.of("edit.key"), editKey.getBytes(StandardCharsets.UTF_8));    		
+        codeCheck.saveProblem(DEFAULT_REPO, problem, problemFiles);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode responseJSON = mapper.createObjectNode();
+        responseJSON.put("problemID", problem);
+        responseJSON.put("editKey", editKey);
+        responseJSON.put("report", codeCheck.checkAndSave(problem, problemFiles));
+
+        responseJSON.put("problemURL", createProblemURL(prefix, problem, problemFiles));
+        String editURL = prefix + "/private/problem/" + problem + "/" + editKey;
+        responseJSON.put("editURL", editURL);
+        return responseJSON;
     }
     
     private String part1 = """
@@ -161,12 +201,17 @@ public class Upload {
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>Edit Problem</title>
     <script src="/assets/editProblem.js" type="text/javascript"></script>
+    <script src="/assets/util.js" type="text/javascript"></script>
 </head>
 <body style="font-family: sans-serif;">
 Public URL (for your students): 
 <a href="%s" target="_blank">%s</a>
 <form method="post" action="/editedFiles/%s/%s">
-    <div>    		
+<div>
+    <hr>
+    <a href="https://horstmann.com/codecheck/authoring.html" target="_blank">View User Guide</a>
+</div>
+    <div>		
 """;
     
     private String filePart = """
@@ -199,7 +244,9 @@ private String imageFilePart = """
 
     private String part2 = """
     <div id="addfilecontainer">Need more files? <button id="addfile" type="button">Add file</button></div>
-    <div><input type="submit" value="Submit changes"/></div>
+    <div><input type="button" id="codecheck" value="Submit changes"/></div><br>
+    <div id="submitdisplay" class="non-editable"></div>
+    <div id="iframe-container"></div>
     </div>
 </form>
 <p></p>

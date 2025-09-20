@@ -55,6 +55,7 @@ Some housekeeping:
     mkdir -p /opt/codecheck/repo 
         # If this fails, use sudo and give yourself ownership of /opt/codecheck and /opt/codecheck/repo
     cp -R comrun/bin/* /opt/codecheck
+    chmod +x /opt/codecheck/comrun
     sudo useradd -u 1012 -ms /bin/bash comrunner
 
 ## Special Steps for Github Codespaces
@@ -66,7 +67,7 @@ sudo sed -i -e 's/root/ALL/' /etc/sudoers.d/codespace
 sudo cat /etc/sudoers.d/codespace
 ```
 
-and verify that the contents is
+and verify that the contents starts with
 
 ```
 codespace ALL=(ALL) NOPASSWD:ALL 
@@ -79,16 +80,33 @@ sudo apt install acl
 sudo setfacl -PRdm u::rwx,g::rx,o::rx /tmp
 ```
 
+Type the following into the terminal without hitting Enter:
+
+```
+sdk default java 21
+```
+
+Now hit the Tab key. It should autocomplete to something like `21.0.7-ms`. Then hit Enter.
+
+Type
+
+```
+java -version
+```
+
+and see that you get a Java 21 version. 
+
 ## Building the Checker
 
 Build CodeCheck:
 
-    cd codecheck3 # if not already there
+    cd path/to/codecheck3 # i.e. whereever you cloned the repo
+        # On CodeSpaces, cd /workspaces/codecheck3
     mvn package -Dmaven.test.skip
 
 Test that the checker works:
 
-    chmod +x cli/codecheck comrun/bin/comrun
+    chmod +x cli/codecheck 
     cli/codecheck -t samples/java/example1
 
 If you omit the `-t`, you get a report with your default browser instead
@@ -167,6 +185,8 @@ with samples. For example,
 rm -rf /tmp/submission /tmp/problem
 mkdir /tmp/submission
 mkdir /tmp/problem
+cd path/to/codecheck3 # i.e. whereever you cloned the repo
+    # On CodeSpaces, cd /workspaces/codecheck3
 cp samples/java/example1/*.java /tmp/submission
 cp -R samples/java/example1 /tmp/problem
 ```
@@ -178,6 +198,8 @@ Review the configuration in `src/main/resources/application.properties`. (The de
 
 Run the `codecheck-webapp` server:
 
+    cd path/to/codecheck3 # i.e. whereever you cloned the repo
+        # On CodeSpaces, cd /workspaces/codecheck3
     COMRUN_USER=$(whoami) mvn quarkus:dev
 
 Point your browser to <http://localhost:8080/assets/uploadProblem.html>.
@@ -211,6 +233,8 @@ sudo touch /etc/containers/nodocker
 
 Build and run the Docker container for the `comrun` service:
 
+    cd path/to/codecheck3 # i.e. whereever you cloned the repo
+        # On CodeSpaces, cd /workspaces/codecheck3
     docker build --tag comrun:1.0-SNAPSHOT comrun
     docker run -p 8080:8080 -it comrun:1.0-SNAPSHOT &
 

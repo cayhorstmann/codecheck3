@@ -5,13 +5,16 @@ import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
-import services.Upload;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @RequestScoped
 @jakarta.ws.rs.Path("/")
@@ -19,14 +22,6 @@ public class UploadController {
     @Inject services.Upload uploadService;
     @Context UriInfo uriInfo;
     @Context HttpHeaders headers;
-
-    @POST
-    @jakarta.ws.rs.Path("/uploadFiles")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    @Produces(MediaType.TEXT_HTML)
-    public Response uploadFiles(MultivaluedMap<String, String> params) {
-        return uploadFiles(null, null, params);
-    }
 
     @POST
     @jakarta.ws.rs.Path("/editedFiles/{problem}/{editKey}")
@@ -45,7 +40,6 @@ public class UploadController {
                 }
                 n++;
             }
-
             String response = uploadService.checkAndSaveProblem(HttpUtil.prefix(uriInfo, headers),
                     problem, problemFiles, editKey);
             return Response.ok(response).build();
@@ -81,12 +75,38 @@ public class UploadController {
     @GET
     @jakarta.ws.rs.Path("/private/problem/{problem}/{editKey}")
     @Produces(MediaType.TEXT_HTML)
-    public Response editProblem(@PathParam("problem") String problem, @PathParam("editKey") String editKey) {
+    public Response editProblem(@PathParam("problem") String problemID, @PathParam("editKey") String editKey) {
         try {
-            String response = uploadService.editProblem(HttpUtil.prefix(uriInfo, headers), problem, editKey);
+            String response = uploadService.editProblem(HttpUtil.prefix(uriInfo, headers), problemID, editKey);
             return Response.ok(response).type(MediaType.TEXT_HTML).build();
         } catch (Exception ex) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(Util.getStackTrace(ex)).build();
+        }
+    }
+
+    @POST
+    @jakarta.ws.rs.Path("/codecheck")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response codecheck(ObjectNode params) {
+        try {
+            Iterator<Map.Entry<String, JsonNode>> fields = params.fields();
+            Map<Path, byte[]> problemFiles = new TreeMap<>();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> entry = fields.next();
+                String key = entry.getKey();
+                if (key.trim().length() > 0 && key != "problemID" && key != "editKey") {
+                    String contents = entry.getValue().asText().replaceAll("\r\n", "\n");
+                    problemFiles.put(Path.of(key), contents.getBytes(StandardCharsets.UTF_8));
+                }
+            }
+            String problemID = params.get("problemID").asText(null);
+            String editKey = params.get("editKey").asText(null);
+            ObjectNode responseJSON = uploadService.checkProblem(HttpUtil.prefix(uriInfo, headers), problemFiles, problemID, editKey);
+            return Response.ok(responseJSON).build();
+        } catch (Exception ex) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(Util.getStackTrace(ex)).build();
         }
     }
 }

@@ -7,20 +7,29 @@
     <title>Upload Content</title>
 </head>
 <body style="font-family: sans-serif;">
-<form method="post" action="../uploadFiles">
-    <div>
-    <p>File name: <input name="filename1" size="25" type="text"/></p>
-    <p><textarea name="contents1" rows="24" cols="80"></textarea></p>
-    <div id="addfilecontainer">Need more files? <button id="addfile" type="button">Add file</button></div>
-    <div><input type="submit" value="Submit files"/></div>
-    </div>
-</form>
+<div>
+<a href="https://horstmann.com/codecheck/authoring.html" target="_blank">View User Guide</a>
+</div>
+<div>
+<p>File name: <input id="filename1" name="filename1" size="25" type="text"/></p>
+<p><textarea id="contents1" name="contents1" rows="24" cols="80"></textarea></p>
+<div id="addfilecontainer">Need more files? <button id="addfile" type="button">Add file</button></div>
+</div> <br>
+<button id="codecheck" type="button">Submit Changes</button><br><br>
+<div><button disabled id="newproblem" type="button">Start New Problem</button></div><br>
+<div id="editURL" class="non-editable"></div><br>
+<div id="studentURL" class="non-editable"></div>
+<div id="iframe-container"></div>
 <hr/>
 <form method="post" action="../uploadProblem" enctype="multipart/form-data">
 <p>Alternatively, upload a zip file: <input name="file" id="file" type="file"/></p>
 <p><input id="upload" type="submit" value="Upload zip file"/></p></form>
+<script src="util.js" type="text/javascript"></script>
 <script type="text/javascript">
 let fileIndex = 1
+let prevResult
+let problemID = null
+let editKey = null
 
 document.getElementById('addfile').addEventListener('click',
   function() {
@@ -47,6 +56,44 @@ document.getElementById('upload').disabled = document.getElementById('file').fil
 document.getElementById('file').addEventListener('change', function() {
     document.getElementById('upload').disabled = document.getElementById('file').files.length === 0
 })
+
+document.getElementById("newproblem").addEventListener("click", function() {
+    window.open(window.location.href, '_blank');
+});
+
+document.getElementById("codecheck").addEventListener("click", function() {
+    let fileIndex = 1;
+    const fileMap = new Map()
+    while(document.getElementById("filename" + fileIndex)) {
+      const name = document.getElementById("filename" + fileIndex).value
+      const content = document.getElementById("contents" + fileIndex).value
+      fileMap.set(name, content)
+      fileIndex++
+    }
+    fileMap.set("problemID", problemID)
+    fileMap.set("editKey", editKey)
+    const jsonPayload = Object.fromEntries(fileMap)
+
+    postData("../codecheck", jsonPayload)
+      .then(response => {
+        problemID = response.problemID
+        editKey = response.editKey
+        if (response.report) {
+          prevResult = response;
+          const iframe = document.createElement("iframe");
+          iframe.srcdoc = response.report
+          iframe.height = 400;
+          iframe.style.width = "90%";
+          iframe.style.margin = "2em";
+          document.getElementById("iframe-container").innerHTML = "";
+          document.getElementById("iframe-container").appendChild(iframe);
+        }
+        document.getElementById("newproblem").disabled = false;
+        document.getElementById("editURL").innerHTML = "Edit URL (for you only): <a href=" + response.editURL + " target=\"_blank\">" + response.editURL + "</a>"
+        document.getElementById("studentURL").innerHTML = "Public URL (for your students): <a href=" + response.problemURL + " target=\"_blank\">" + response.problemURL + "</a>"
+  });
+});
+
 </script>
 </body>
 </html>
