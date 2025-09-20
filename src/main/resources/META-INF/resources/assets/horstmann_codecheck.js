@@ -810,63 +810,61 @@ window.addEventListener('load', async function () {
         let fileName = useFileNames[i]
         let text = setup.useFiles[fileName].replace(/\r?\n$/, '')
 
-        let editorDiv = document.createElement('div')
-        editorDiv.classList.add('editor')
-        editorDiv.textContent = text
-        let editor = ace.edit(editorDiv)
         let fileObj = document.createElement('div')
         fileObj.classList.add('codecheckUseFile')
         let filenameDiv = document.createElement('div')
         filenameDiv.classList.add('codecheckFilename')
         filenameDiv.textContent = directoryPrefix + fileName
-
         fileObj.appendChild(filenameDiv)
+        form.appendChild(fileObj)
         if (text.includes("data:image/")) {
           let imgDiv = document.createElement('img')
           imgDiv.src = text
           imgDiv.classList.add("img")
           fileObj.appendChild(imgDiv)
         } else {
+          let editorDiv = document.createElement('div')
+          editorDiv.classList.add('editor')
+          editorDiv.textContent = text
+          let editor = ace.edit(editorDiv)
           fileObj.appendChild(editorDiv)
+          setupAceEditor(editorDiv, editor, fileName, /*readonly*/ true)
+          const MAX_LINES = 200
+          const lines =  text.split(/\n/).length
+          if (lines > MAX_LINES) {
+            editor.setOptions({
+              minLines: MAX_LINES,
+              maxLines: MAX_LINES
+            })
+            editor.resize()
+            const viewButton = createButton('hc-command', _('Expand'), function() {
+              if (editor.getOption('maxLines') > MAX_LINES) {
+                editor.setOptions({
+                  minLines: MAX_LINES,
+                  maxLines: MAX_LINES
+                })
+                editor.resize()
+                viewButton.innerHTML = _('Expand')
+              }
+              else {
+                editor.setOptions({
+                  minLines: lines,
+                  maxLines: lines
+                })
+                editor.resize()
+                viewButton.innerHTML = _('Collapse')
+              }
+            })
+            form.appendChild(viewButton)
+          } else {
+            editor.setOptions({
+              minLines: lines,
+              maxLines: lines
+            })
+            editor.resize()
+          }
         }
-        setupAceEditor(editorDiv, editor, fileName, /*readonly*/ true)
-        form.appendChild(fileObj)
-
-        const MAX_LINES = 200
-        const lines =  text.split(/\n/).length
-        if (lines > MAX_LINES) {
-          editor.setOptions({
-            minLines: MAX_LINES,
-            maxLines: MAX_LINES
-          })
-          editor.resize()
-          const viewButton = createButton('hc-command', _('Expand'), function() {
-			if (editor.getOption('maxLines') > MAX_LINES) {
-              editor.setOptions({
-                minLines: MAX_LINES,
-                maxLines: MAX_LINES
-              })
-              editor.resize()
-              viewButton.innerHTML = _('Expand')
-            }
-            else {
-              editor.setOptions({
-                minLines: lines,
-                maxLines: lines
-              })
-              editor.resize()
-              viewButton.innerHTML = _('Collapse')
-            }
-          })
-          form.appendChild(viewButton)
-        } else {
-          editor.setOptions({
-            minLines: lines,
-            maxLines: lines
-          })
-          editor.resize()
-        }
-      }  
+      }
       
 	  submitButton = createButton('hc-start', submitButtonLabel, async function() {
         response.textContent = 'Submitting...'
