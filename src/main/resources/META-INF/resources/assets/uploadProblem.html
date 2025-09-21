@@ -44,10 +44,12 @@ document.getElementById('addfile').addEventListener('click',
     addFile.parentNode.insertBefore(fileDiv, addFile)
     
     document.getElementById('delete' + fileIndex).addEventListener('click',
-      function() {
-        document.getElementById('filename' + fileIndex).setAttribute('value', '')
-        document.getElementById('contents' + fileIndex).innerHTML = ''
-        document.getElementById('item' + fileIndex).style.display = 'none'
+      function(e) {
+        const index = e.target.id.replace('delete', '')
+        document.getElementById('filename' + index).setAttribute('value', '')
+        document.getElementById('contents' + index).innerHTML = ''
+        document.getElementById('contents' + index).value = ''
+        document.getElementById('item' + index).style.display = 'none'
     })
 })
 
@@ -67,8 +69,11 @@ document.getElementById("codecheck").addEventListener("click", function() {
     while(document.getElementById("filename" + fileIndex)) {
       const name = document.getElementById("filename" + fileIndex).value
       const content = document.getElementById("contents" + fileIndex).value
-      fileMap.set(name, content)
+      if (content) {
+        fileMap.set(name, content)
+      }
       fileIndex++
+
     }
     fileMap.set("problemID", problemID)
     fileMap.set("editKey", editKey)
