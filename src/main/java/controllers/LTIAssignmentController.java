@@ -14,6 +14,7 @@ import services.ServiceException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.Map;
 
 @RequestScoped
@@ -28,9 +29,32 @@ public class LTIAssignmentController {
     @jakarta.ws.rs.Path("/lti/config")
     @Produces(MediaType.APPLICATION_XML)
     public Response config() throws IOException {
+        System.out.println("In config()");
         String host = uriInfo.getBaseUri().getHost();
         String result = assignmentService.config(host);
         return Response.ok(result).build();
+    }
+
+
+    @POST
+    @jakarta.ws.rs.Path("/lti/contentSelection")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.TEXT_HTML)
+    // For LTI Deeplinking launch to a LMS (LTI 1.1)
+    public Response contentSelection(MultivaluedMap<String, String> formParams) throws IOException {
+        try {
+            // result is a HTML form that gets a problem URL from the instructor
+            // and POSTs it to lti/problem alongwith LMS payload
+            StringBuilder result = new StringBuilder();
+            result.append(part1);
+            formParams.forEach((key, values) -> {
+                result.append(formParamPart.formatted(key, values));
+            });
+            result.append(part2);
+            return Response.ok(result.toString()).build();
+        } catch (ServiceException e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        }
     }
 
     @POST
@@ -202,4 +226,25 @@ public class LTIAssignmentController {
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         }
     }
+
+    private String part1 = """
+                <html>
+                    <head><title>Content Selector</title></head>
+                    <body>
+                        <form method="post" action="/lti/problem">
+                            <label for="problemURL">Enter a CodeCheck Problem URL:</label><br>
+                            <input type="text" id="problemURL" name="problemURL"><br>
+
+                """;
+
+    private String formParamPart = """
+                            <input type="hidden" name="%s" value="%s" />
+                """;
+
+    private String part2 ="""
+                            <input type="submit" value="Submit">
+                        </form>
+                    </body>
+                </html>
+                """;
 }
