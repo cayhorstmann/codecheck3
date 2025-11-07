@@ -29,7 +29,6 @@ public class LTIAssignmentController {
     @jakarta.ws.rs.Path("/lti/config")
     @Produces(MediaType.APPLICATION_XML)
     public Response config() throws IOException {
-        System.out.println("In config()");
         String host = uriInfo.getBaseUri().getHost();
         String result = assignmentService.config(host);
         return Response.ok(result).build();
