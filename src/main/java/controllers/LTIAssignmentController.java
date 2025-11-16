@@ -13,9 +13,13 @@ import services.ServiceException;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.imsglobal.lti.launch.LtiOauthSigner;
+import org.imsglobal.lti.launch.LtiSigningException;
 
 @RequestScoped
 @jakarta.ws.rs.Path("/")
@@ -40,20 +44,56 @@ public class LTIAssignmentController {
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_HTML)
     // For LTI Deeplinking launch to a LMS (LTI 1.1)
-    public Response contentSelection(MultivaluedMap<String, String> formParams) throws IOException {
-        try {
-            // result is a HTML form that gets a problem URL from the instructor
-            // and POSTs it to lti/problem alongwith LMS payload
+public Response contentSelection(MultivaluedMap<String, String> formParams)
+        throws IOException, InvalidKeyException, LtiSigningException {
+    try {
+        var signer = new LtiOauthSigner();
+        var json = """
+{
+  "@context" : "http://purl.imsglobal.org/ctx/lti/v1/ContentItem",
+  "@graph" : [
+    { "@type" : "FileItem",
+      "url" : "https://www.imsglobal.org/sites/default/files/IMSconformancelogosm.png",
+      "mediaType" : "image/png",
+      "text" : "1EdTech logo for certified products",
+      "title" : "The logo used to identify 1EdTech certified products",
+      "placementAdvice" : {
+        "displayWidth" : 147,
+        "displayHeight" : 184,
+        "presentationDocumentTarget" : "embed"
+      }
+    }
+  ]
+}""";
+            var request = new HashMap<String, String>();
+            request.put("lti_message_type", "ContentItemSelection");
+            request.put("lti_version", "LTI-1p0");
+            request.put("content_items", escapeJSONAttribute(json));
+            // using the escaped json and non-escaped version shows double encoding(?)
+            // based on Tsugi's base string comparison tool
+            //request.put("content_items", json);
+
+            String return_url = formParams.getFirst("content_item_return_url");
+            // consumer key and secret hardcoded to match contentSelection tool in Moodle
+            var signed = signer.signParameters(request, "consumer", "secret", return_url, "POST");
             StringBuilder result = new StringBuilder();
-            result.append(part1);
-            formParams.forEach((key, values) -> {
-                result.append(formParamPart.formatted(key, values));
-            });
+            result.append(String.format(part1, return_url));
+            for (Map.Entry<String, String> entry : signed.entrySet()) {
+                result.append(String.format(formParamPart,
+                                            entry.getKey(),
+                                            entry.getValue()));
+            }
             result.append(part2);
             return Response.ok(result.toString()).build();
         } catch (ServiceException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         }
+    }
+
+    String escapeJSONAttribute(String attr) {
+        return attr.replace("&", "&amp;")
+                .replace("\"", "&quot;")
+                .replaceAll("\\s+", " ");
     }
 
     @POST
@@ -230,10 +270,8 @@ public class LTIAssignmentController {
                 <html>
                     <head><title>Content Selector</title></head>
                     <body>
-                        <form method="post" action="/lti/problem">
+                        <form method="post" action="%s">
                             <label for="problemURL">Enter a CodeCheck Problem URL:</label><br>
-                            <input type="text" id="problemURL" name="problemURL"><br>
-
                 """;
 
     private String formParamPart = """
@@ -246,4 +284,43 @@ public class LTIAssignmentController {
                     </body>
                 </html>
                 """;
+
+    private String content_items_example = 
+    """
+{"@context": [
+    "http://purl.imsglobal.org/ctx/lti/v1/ContentItem",
+    {
+      "lineItem": "http://purl.imsglobal.org/ctx/lis/v2/LineItem",
+      "res": "http://purl.imsglobal.org/ctx/lis/v2p1/Result#"
+    }
+  ],
+  "@graph": [
+    {
+      "@type": "LtiLinkItem",
+      "mediaType": "application/vnd.ims.lti.v1.ltilink",
+      "title": "Deep Linking Test Item",
+      "text": "Launch this test item from the LMS.",
+      "url": "https://legendary-space-acorn-x5vr74v5vx693pw49-8080.app.github.dev/lti/problem",
+      "custom": {
+        "attempt_id": "test-001",
+        "mode": "practice"
+      },
+      "lineItem": {
+        "@type": "LineItem",
+        "label": "Deep Linking Test Grade",
+        "reportingMethod": "res:totalScore",
+        "assignedActivity": {
+          "@id": "https://www.wikipedia.org/",
+          "activity_id": "test-001"
+        },
+        "scoreConstraints": {
+          "@type": "NumericLimits",
+          "normalMaximum": 100,
+          "extraCreditMaximum": 0,
+          "totalMaximum": 100
+        }
+      }
+    }
+  ]
+}""";
 }
