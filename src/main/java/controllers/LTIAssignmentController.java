@@ -16,6 +16,7 @@ import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.imsglobal.lti.launch.LtiOauthSigner;
@@ -43,8 +44,38 @@ public class LTIAssignmentController {
     @jakarta.ws.rs.Path("/lti/contentSelection")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_HTML)
-    // For LTI Deeplinking launch to a LMS (LTI 1.1)
 public Response contentSelection(MultivaluedMap<String, String> formParams)
+        throws IOException, InvalidKeyException, LtiSigningException {
+    try {
+            // This only produces the form for the professor to input a link
+            StringBuilder form = new StringBuilder();
+
+            // This sets the form action to the other endpoint
+            // to handle content_items and signing
+            form.append(String.format(contentSelectionForm, "/lti/contentSelectionReturn"));
+
+            // This will append formParams as hidden inputs
+            // so that /lti/contentSelectionReturn can access the information
+            for (Map.Entry<String, List<String>> entry : formParams.entrySet()) {
+                String key = entry.getKey();
+                for (String value : entry.getValue()) {
+                    form.append(String.format(formParamPart, key, value));
+                }
+            }
+
+            form.append(formEnding);
+            return Response.ok(form.toString()).build();
+        } catch (ServiceException e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        }
+    }
+
+    @POST
+    @jakarta.ws.rs.Path("/lti/contentSelectionReturn")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.TEXT_HTML)
+    // For LTI Deeplinking launch to a LMS (LTI 1.1)
+    public Response contentSelectionReturn(MultivaluedMap<String, String> formParams)
         throws IOException, InvalidKeyException, LtiSigningException {
     try {
         var signer = new LtiOauthSigner();
@@ -65,6 +96,7 @@ public Response contentSelection(MultivaluedMap<String, String> formParams)
     }
   ]
 }""";
+            System.out.println("formParams: " + formParams);
             var request = new HashMap<String, String>();
             request.put("lti_message_type", "ContentItemSelection");
             request.put("lti_version", "LTI-1p0");
@@ -76,14 +108,15 @@ public Response contentSelection(MultivaluedMap<String, String> formParams)
             String return_url = formParams.getFirst("content_item_return_url");
             // consumer key and secret hardcoded to match contentSelection tool in Moodle
             var signed = signer.signParameters(request, "consumer", "secret", return_url, "POST");
+            System.out.println("SIGNED: " + signed.entrySet());
             StringBuilder result = new StringBuilder();
-            result.append(String.format(part1, return_url));
+            result.append(String.format(contentSelectionReturnForm, return_url));
             for (Map.Entry<String, String> entry : signed.entrySet()) {
                 result.append(String.format(formParamPart,
                                             entry.getKey(),
                                             entry.getValue()));
             }
-            result.append(part2);
+            result.append(formEnding);
             return Response.ok(result.toString()).build();
         } catch (ServiceException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
@@ -266,19 +299,26 @@ public Response contentSelection(MultivaluedMap<String, String> formParams)
         }
     }
 
-    private String part1 = """
+    private String contentSelectionForm = """
                 <html>
-                    <head><title>Content Selector</title></head>
                     <body>
                         <form method="post" action="%s">
-                            <label for="problemURL">Enter a CodeCheck Problem URL:</label><br>
+                            <label for="problem_url">Enter a CodeCheck Problem URL:</label><br>
+                            <input type="text" name="problem_url"/>
                 """;
+
+    private String contentSelectionReturnForm = """
+            <html>
+                <body onload="document.forms[0].submit()">
+                    <p>Returning selected content to Moodle…</p>
+                    <form method="post" action="%s">
+            """;
 
     private String formParamPart = """
                             <input type="hidden" name="%s" value="%s" />
                 """;
 
-    private String part2 ="""
+    private String formEnding ="""
                             <input type="submit" value="Submit">
                         </form>
                     </body>
