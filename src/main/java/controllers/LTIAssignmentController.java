@@ -83,11 +83,11 @@ public Response contentSelection(MultivaluedMap<String, String> formParams)
 {
   "@context" : "http://purl.imsglobal.org/ctx/lti/v1/ContentItem",
   "@graph" : [
-    { "@type" : "FileItem",
-      "url" : "https://www.imsglobal.org/sites/default/files/IMSconformancelogosm.png",
-      "mediaType" : "image/png",
-      "text" : "1EdTech logo for certified products",
-      "title" : "The logo used to identify 1EdTech certified products",
+    { "@type" : "LtiLinkItem",
+      "url" : "%s",
+      "mediaType" : "application/vnd.ims.lti.v1.ltilink",
+      "text" : "Launch CodeCheck Problem: Numbers.java",
+      "title" : "CodeCheck Problem",
       "placementAdvice" : {
         "displayWidth" : 147,
         "displayHeight" : 184,
@@ -96,11 +96,12 @@ public Response contentSelection(MultivaluedMap<String, String> formParams)
     }
   ]
 }""";
-            System.out.println("formParams: " + formParams);
+            json = String.format(json, formParams.get("problem_url").getFirst());
             var request = new HashMap<String, String>();
             request.put("lti_message_type", "ContentItemSelection");
             request.put("lti_version", "LTI-1p0");
             request.put("content_items", escapeJSONAttribute(json));
+            request.put("data", "");
             // using the escaped json and non-escaped version shows double encoding(?)
             // based on Tsugi's base string comparison tool
             //request.put("content_items", json);
