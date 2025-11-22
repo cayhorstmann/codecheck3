@@ -100,16 +100,28 @@ public Response contentSelection(MultivaluedMap<String, String> formParams)
             var request = new HashMap<String, String>();
             request.put("lti_message_type", "ContentItemSelection");
             request.put("lti_version", "LTI-1p0");
-            request.put("content_items", escapeJSONAttribute(json));
             request.put("data", "");
-            // using the escaped json and non-escaped version shows double encoding(?)
-            // based on Tsugi's base string comparison tool
-            //request.put("content_items", json);
+            request.put("oauth_callback", "about:blank");
+            // use the raw JSON for the signer
+            request.put("content_items", json);
+            // request.put("content_items", escapeJSONAttribute(json));
 
             String return_url = formParams.getFirst("content_item_return_url");
+
+            // this produces a version of the return_url without query parameters
+            // String stripped_url = "";
+            // int n = return_url.lastIndexOf("?");
+            // if (n >= 0) {
+            //     stripped_url = return_url.substring(0, n);
+            // }
+
             // consumer key and secret hardcoded to match contentSelection tool in Moodle
             var signed = signer.signParameters(request, "consumer", "secret", return_url, "POST");
-            System.out.println("SIGNED: " + signed.entrySet());
+            
+            // replace with JSON-escaped version for HTML form construction
+            signed.put("content_items", escapeJSONAttribute(json));
+
+            // Create the HTML form
             StringBuilder result = new StringBuilder();
             result.append(String.format(contentSelectionReturnForm, return_url));
             for (Map.Entry<String, String> entry : signed.entrySet()) {
