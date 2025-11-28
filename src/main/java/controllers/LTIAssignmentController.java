@@ -74,52 +74,22 @@ public Response contentSelection(MultivaluedMap<String, String> formParams)
     @jakarta.ws.rs.Path("/lti/contentSelectionReturn")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_HTML)
-    // For LTI Deeplinking launch to a LMS (LTI 1.1)
     public Response contentSelectionReturn(MultivaluedMap<String, String> formParams)
         throws IOException, InvalidKeyException, LtiSigningException {
-    try {
-        var signer = new LtiOauthSigner();
-        var json = """
-{
-  "@context" : "http://purl.imsglobal.org/ctx/lti/v1/ContentItem",
-  "@graph" : [
-    { "@type" : "LtiLinkItem",
-      "url" : "%s",
-      "mediaType" : "application/vnd.ims.lti.v1.ltilink",
-      "text" : "Launch CodeCheck Problem: Numbers.java",
-      "title" : "CodeCheck Problem",
-      "placementAdvice" : {
-        "displayWidth" : 147,
-        "displayHeight" : 184,
-        "presentationDocumentTarget" : "embed"
-      }
-    }
-  ]
-}""";
-            json = String.format(json, formParams.get("problem_url").getFirst());
+        try {
+            var signer = new LtiOauthSigner();
+            String json = String.format(content_item.replace("\n", ""), formParams.get("problem_url").getFirst());
             var request = new HashMap<String, String>();
             request.put("lti_message_type", "ContentItemSelection");
             request.put("lti_version", "LTI-1p0");
             request.put("data", "");
-            request.put("oauth_callback", "about:blank");
-            // use the raw JSON for the signer
             request.put("content_items", json);
-            // request.put("content_items", escapeJSONAttribute(json));
 
             String return_url = formParams.getFirst("content_item_return_url");
 
-            // this produces a version of the return_url without query parameters
-            // String stripped_url = "";
-            // int n = return_url.lastIndexOf("?");
-            // if (n >= 0) {
-            //     stripped_url = return_url.substring(0, n);
-            // }
-
-            // consumer key and secret hardcoded to match contentSelection tool in Moodle
-            var signed = signer.signParameters(request, "consumer", "secret", return_url, "POST");
-            
-            // replace with JSON-escaped version for HTML form construction
-            signed.put("content_items", escapeJSONAttribute(json));
+            String consumer_key = formParams.get("oauth_consumer_key").getFirst();
+            // TODO: secret can't be hardcoded--how does CodeCheck handle its secrets for different LMS's?
+            var signed = signer.signParameters(request, consumer_key, "secret", return_url, "POST");
 
             // Create the HTML form
             StringBuilder result = new StringBuilder();
@@ -127,7 +97,7 @@ public Response contentSelection(MultivaluedMap<String, String> formParams)
             for (Map.Entry<String, String> entry : signed.entrySet()) {
                 result.append(String.format(formParamPart,
                                             entry.getKey(),
-                                            entry.getValue()));
+                                            escapeAttribute(entry.getValue())));
             }
             result.append(formEnding);
             return Response.ok(result.toString()).build();
@@ -136,10 +106,9 @@ public Response contentSelection(MultivaluedMap<String, String> formParams)
         }
     }
 
-    String escapeJSONAttribute(String attr) {
-        return attr.replace("&", "&amp;")
-                .replace("\"", "&quot;")
-                .replaceAll("\\s+", " ");
+    String escapeAttribute(String attr) {
+         return attr.replace("&", "&amp;")
+                 .replace("\"", "&quot;");
     }
 
     @POST
@@ -338,42 +307,21 @@ public Response contentSelection(MultivaluedMap<String, String> formParams)
                 </html>
                 """;
 
-    private String content_items_example = 
-    """
-{"@context": [
-    "http://purl.imsglobal.org/ctx/lti/v1/ContentItem",
-    {
-      "lineItem": "http://purl.imsglobal.org/ctx/lis/v2/LineItem",
-      "res": "http://purl.imsglobal.org/ctx/lis/v2p1/Result#"
-    }
-  ],
-  "@graph": [
-    {
-      "@type": "LtiLinkItem",
-      "mediaType": "application/vnd.ims.lti.v1.ltilink",
-      "title": "Deep Linking Test Item",
-      "text": "Launch this test item from the LMS.",
-      "url": "https://legendary-space-acorn-x5vr74v5vx693pw49-8080.app.github.dev/lti/problem",
-      "custom": {
-        "attempt_id": "test-001",
-        "mode": "practice"
-      },
-      "lineItem": {
-        "@type": "LineItem",
-        "label": "Deep Linking Test Grade",
-        "reportingMethod": "res:totalScore",
-        "assignedActivity": {
-          "@id": "https://www.wikipedia.org/",
-          "activity_id": "test-001"
-        },
-        "scoreConstraints": {
-          "@type": "NumericLimits",
-          "normalMaximum": 100,
-          "extraCreditMaximum": 0,
-          "totalMaximum": 100
-        }
-      }
-    }
-  ]
+    private String content_item = """
+{
+   "@context" : "http://purl.imsglobal.org/ctx/lti/v1/ContentItem",
+   "@graph" : [
+     { "@type" : "LtiLinkItem",
+       "url" : "%s",
+       "mediaType" : "application/vnd.ims.lti.v1.ltilink",
+       "text" : "Launch CodeCheck Problem",
+       "title" : "CodeCheck Problem",
+       "placementAdvice" : {
+         "displayWidth" : 147,
+         "displayHeight" : 184,
+         "presentationDocumentTarget" : "embed"
+       }
+     }
+   ]
 }""";
 }
