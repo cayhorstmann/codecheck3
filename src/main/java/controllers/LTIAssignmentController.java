@@ -10,6 +10,7 @@ import jakarta.ws.rs.core.*;
 import services.JWT;
 import oauth.signpost.exception.OAuthException;
 import services.ServiceException;
+import services.StorageConnector;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -27,6 +28,7 @@ import org.imsglobal.lti.launch.LtiSigningException;
 public class LTIAssignmentController {
     @Inject services.LTIAssignment assignmentService;
     @Inject JWT jwt;
+    @Inject StorageConnector connector;
     @Context UriInfo uriInfo;
     @Context HttpHeaders headers;
 
@@ -88,8 +90,8 @@ public Response contentSelection(MultivaluedMap<String, String> formParams)
             String return_url = formParams.getFirst("content_item_return_url");
 
             String consumer_key = formParams.get("oauth_consumer_key").getFirst();
-            // TODO: secret can't be hardcoded--how does CodeCheck handle its secrets for different LMS's?
-            var signed = signer.signParameters(request, consumer_key, "secret", return_url, "POST");
+            String shared_secret = connector.readLTISharedSecret(consumer_key);
+            var signed = signer.signParameters(request, consumer_key, shared_secret, return_url, "POST");
 
             // Create the HTML form
             StringBuilder result = new StringBuilder();
