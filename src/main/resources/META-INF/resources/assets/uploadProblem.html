@@ -18,7 +18,7 @@
 <div id="addfilecontainer">Need more files? <button id="addfile" type="button">Add file</button></div>
 </div> <br>
 <button id="codecheck" type="button">Submit Changes</button><br><br>
-<div><button disabled id="newproblem" type="button">Start New Problem</button></div><br>
+<div><button style="display: none;" id="newproblem" type="button">Start New Problem</button></div><br>
 <div id="editURL" class="non-editable"></div><br>
 <div id="studentURL" class="non-editable"></div>
 <div id="iframe-container"></div>
@@ -93,7 +93,7 @@ document.getElementById("codecheck").addEventListener("click", function() {
           document.getElementById("iframe-container").innerHTML = "";
           document.getElementById("iframe-container").appendChild(iframe);
         }
-        document.getElementById("newproblem").disabled = false;
+        document.getElementById("newproblem").style.display = "inline";
         document.getElementById("editURL").innerHTML = "Edit URL (for you only): <a href=" + response.editURL + " target=\"_blank\">" + response.editURL + "</a>"
         document.getElementById("studentURL").innerHTML = "Public URL (for your students): <a href=" + response.problemURL + " target=\"_blank\">" + response.problemURL + "</a>"
   });

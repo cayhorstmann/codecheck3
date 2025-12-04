@@ -3,6 +3,7 @@ package controllers;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horstmann.codecheck.checker.Util;
+import io.smallrye.common.annotation.RunOnVirtualThread;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -82,6 +83,7 @@ public class CheckController {
     @jakarta.ws.rs.Path("/checkNJS")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
+    @RunOnVirtualThread
     public Response checkNJS(JsonNode json, @CookieParam("ccid") String ccid) throws ScriptException, IOException, InterruptedException, NoSuchMethodException {
         try {
             if (ccid == null) ccid = Util.createPronouncableUID();

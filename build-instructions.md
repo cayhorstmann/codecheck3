@@ -136,7 +136,7 @@ Use this debugging configuration to debug the command line tool. Use the already
 
 If you use Codespaces, you need to use Visual Studio Code as your IDE. If not, skip this section and follow the section about configuring IntelliJ instead. 
 
-Install the Extension Pack for Java (from  vscjava), and Quarkus (from Red Hat) extensions into Visual Studio Code.
+Install the Extension Pack for Java (from Microsoft), and Quarkus (from Red Hat) extensions into Visual Studio Code.
 
 You may need to click on the teensy word "Java" in the status line and wait until it says "Java: ready". 
 

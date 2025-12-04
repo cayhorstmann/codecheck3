@@ -1,12 +1,4 @@
-
-@font-face {
-    font-family: "Mono";
-    src: url("https://horstmann.com/fonts/NotoSansMono-VariableFont_wdth,wght.ttf");
-    font-stretch: 60%;
-}
-
-
-.studentFiles, .providedFiles { 
+.studentFiles, .providedFiles {
     display: none; 
 }
 
@@ -42,14 +34,12 @@
     margin-left: 1.18em;
     font-weight: bold;
     font-family: "Mono", sans-serif;
-    font-size: 0.85em;
 }
 
 .codecheck-submit-response .header {
     color:#0054a8;
     font-weight: bold;
     font-family: "Mono", sans-serif;
-    font-size: 1em;
     margin-left: 0em;
 }
 
@@ -94,14 +84,12 @@
 
 .codecheck-submit-response, .codecheck-submit-response p {
     font-family: "Mono", sans-serif;
-    font-size: .9em;
     margin-left: 1em;
     margin-bottom: 1em;
 }
 
 .editor {
     font-family: "Mono", monospace;
-    font-size: 0.8em;
 }
 
 /* Use the same color as in chrome theme for highlighting: https://github.com/cayhorstmann/codecheck2/issues/67 */

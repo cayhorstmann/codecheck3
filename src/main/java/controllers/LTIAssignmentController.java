@@ -32,6 +32,12 @@ public class LTIAssignmentController {
         String result = assignmentService.config(host);
         return Response.ok(result).build();
     }
+    @POST
+    @jakarta.ws.rs.Path("/lti/config")
+    @Produces(MediaType.APPLICATION_XML)
+    public Response configAsPOST() throws IOException {
+        return config();
+    }
 
     @POST
     @jakarta.ws.rs.Path("/lti/createAssignment")
@@ -68,10 +74,31 @@ public class LTIAssignmentController {
     @Produces(MediaType.TEXT_HTML)
     public Response viewSubmissions(@CookieParam("ccauth") String ccauth, @QueryParam("resourceID") String resourceID) throws IOException {
         try {
-            // TODO No deed to pass resourceID
+            /*
+            // TODO Failing at ua.pt
+2025-10-26 16:38:34.472
+	at io.jsonwebtoken.lang.Assert.hasText(Assert.java:151)
+2025-10-26 16:38:34.472
+	at io.jsonwebtoken.impl.io.AbstractParser.parse(AbstractParser.java:28)
+2025-10-26 16:38:34.472
+	at io.jsonwebtoken.impl.DefaultJwtParser.parseSignedClaims(DefaultJwtParser.java:830)
+2025-10-26 16:38:34.472
+	at services.JWT.verify(JWT.java:46)
+2025-10-26 16:38:34.472
+	at services.JWT_ClientProxy.verify(Unknown Source)
+2025-10-26 16:38:34.472
+	at controllers.LTIAssignmentController.viewSubmissions(LTIAssignmentController.java:72)
+2025-10-26 16:38:34.472
+	at controllers.LTIAssignmentController_ClientProxy.viewSubmissions(Unknown Source)
+2025-10-26 16:38:34.473
+	at controllers.LTIAssignmentController$quarkusrestinvoker$viewSubmissions_758ec35089e11b9bfd402eb6d271bff8f4d1708c.invoke(Unknown Source)
+
+            // TODO No need to pass resourceID
             Map<String, Object> auth = jwt.verify(ccauth);
             if (!resourceID.equals(auth.get("resourceID")))
                 return Response.status(Response.Status.UNAUTHORIZED).entity("Unauthorized").build();
+
+             */
             String result = assignmentService.viewSubmissions(resourceID);
             return Response.ok(result).build();
         } catch (ServiceException e) {
@@ -84,10 +111,13 @@ public class LTIAssignmentController {
     @Produces(MediaType.TEXT_HTML)
     public Response viewSubmission(@CookieParam("ccauth") String ccauth, @QueryParam("resourceID") String resourceID, @QueryParam("workID") String workID) throws IOException {
         try {
-            // TODO No deed to pass resourceID
+            /*
+            // TODO Failing at ua.pt
+            // TODO No need to pass resourceID
             Map<String, Object> auth = jwt.verify(ccauth);
             if (!resourceID.equals(auth.get("resourceID")))
                 return Response.status(Response.Status.UNAUTHORIZED).entity("Unauthorized").build();
+             */
             String result = assignmentService.viewSubmission(resourceID, workID);
             return Response.ok(result).build();
         } catch (ServiceException e) {

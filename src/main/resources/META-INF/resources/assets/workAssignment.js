@@ -318,7 +318,7 @@ window.addEventListener('DOMContentLoaded', () => {
         window.getSelection().removeAllRanges(); }))
       document.getElementById('publicURL').textContent = assignment.publicURL
       privateURLSpan.textContent = assignment.privateURL
-      privateURLSpan.parentNode.parentNode.style.display = 'block'
+      privateURLSpan.parentNode.parentNode.style.display = 'revert'
     }
     else
       privateURLSpan.parentNode.parentNode.style.display = 'none'

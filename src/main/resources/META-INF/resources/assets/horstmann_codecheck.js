@@ -30,11 +30,10 @@ window.addEventListener('load', async function () {
       }
     }
 
-    function createTile(text) {
+    function createTile() {
       let tileDiv = document.createElement('div')
       tileDiv.classList.add('tile')
       tileDiv.classList.add('hc-code')
-      tileDiv.textContent = text
       return tileDiv
     }
 
@@ -170,7 +169,7 @@ window.addEventListener('load', async function () {
           let strippedText = ''
           for (const line of lines) {
             if (strippedText !== '') strippedText += '\n'
-            strippedText += line.substring(minIndent).replace('\t', '   ')
+            strippedText += line.substring(minIndent).replaceAll('\t', '   ')
           }          
           tileDiv.textContent = strippedText
           setIndent(tileDiv, minIndent)
@@ -445,7 +444,7 @@ window.addEventListener('load', async function () {
         else {
         if (code === undefined) code = tile.textContent 
           for (const line of code.split('\n'))
-            content += '\t'.repeat(tile.indent) + line + '\n'
+            content += '   '.repeat(tile.indent) + line + '\n'
       }
       }
       return content
@@ -521,7 +520,7 @@ window.addEventListener('load', async function () {
     editor.setOption('showFoldWidgets', false);
     editor.setOption('newLineMode', 'unix');
     editor.setOption('showPrintMargin', false);
-    editor.setFontSize(14);
+    editor.setFontSize(16);
     // https://stackoverflow.com/questions/28311086/modify-the-gutter-of-ajax-org-cloud9-editor-ace-editor
     editor.session.gutterRenderer =  {
       getWidth: function(session, lastLineNumber, config) {
@@ -962,7 +961,7 @@ window.addEventListener('load', async function () {
       response.innerHTML = report.substring(start + 6, end)
       setState(data['score'])
       if (downloadButton !== undefined) {
-        downloadButton.style.display = 'inline'
+        downloadButton.style.display = 'revert'
         downloadButton.data = data
       }
               
