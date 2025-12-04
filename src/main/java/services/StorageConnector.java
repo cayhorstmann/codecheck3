@@ -48,6 +48,7 @@ import java.nio.channels.FileLock;
 import java.nio.channels.FileLockInterruptionException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -655,7 +656,7 @@ class LocalStorageConnection implements StorageConnection {
     public String readLTISharedSecret(String oauthConsumerKey) throws IOException {
         if (credentials == null)
             credentials = Util.fromJsonString(Files.readString(path("CodeCheckLTICredentials")));
-        return credentials.get("shared_secret").asText();
+        return credentials.get(oauthConsumerKey).asText();
     }
 
     public String readComment(String assignmentID, String workID) throws IOException {
