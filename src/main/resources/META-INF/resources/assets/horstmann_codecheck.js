@@ -977,8 +977,11 @@ window.addEventListener('load', async function () {
       }
     }
 
+    // Saves the state of a problem to the browser's session storage
     window.addEventListener('input', () => {
-      sessionStorage.setItem('studentDraft', JSON.stringify(getState()))
+      // Key is the URL of an iframe
+      const key = window.location.href;
+      sessionStorage.setItem(key, JSON.stringify(getState()))
     });
   
     // ..................................................................
@@ -1018,7 +1021,8 @@ window.addEventListener('load', async function () {
 
   // Restore latest draft
   try {
-    const draft = JSON.parse(sessionStorage.getItem('studentDraft'));
+    const key = window.location.href;
+    const draft = JSON.parse(sessionStorage.getItem(key));
     if (draft) {
       window.restoreState(null, draft);
     }
