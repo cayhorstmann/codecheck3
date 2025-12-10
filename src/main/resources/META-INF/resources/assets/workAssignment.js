@@ -329,10 +329,11 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   if (assignment.isStudent) {
-    if (assignment?.comment !== "") 
+    if (assignment?.comment !== "") {
       document.getElementById('student_comment').textContent = assignment.comment
-    else
+    } else {
       document.getElementById('student_comment_div').style.display = 'none'
+    }
   }
   else if (assignment.saveCommentURL) { // undefined when isStudent
     document.getElementById('instructor_comment').textContent = assignment?.comment
@@ -356,6 +357,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('instructor_comment_div').appendChild(submitButton) 
   } 
   else {
+    document.getElementById('student_comment_div').style.display = 'none'
     document.getElementById('instructor_comment_div').style.display = 'none'
   }
 
