@@ -29,34 +29,43 @@ Install some packages:
 
 ```
 sudo apt update
-sudo apt -y install openjdk-25-jdk maven git curl zip unzip
+sudo apt -y install openjdk-25-jdk maven npm git curl zip unzip
 ```
 
 Clone the repo (unless you are in Codespaces, where it is already cloned)
 
-    git clone https://github.com/cayhorstmann/codecheck3
-
+```
+git clone https://github.com/cayhorstmann/codecheck3
+```
 Some housekeeping:
 
-    cd codecheck3 # if not already there
-    cd cli
-    mkdir lib
-    cd lib
-    curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.6.4/jackson-core-2.6.4.jar
-    curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.6.4/jackson-annotations-2.6.4.jar
-    curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.6.4/jackson-databind-2.6.4.jar
-    cd ../../comrun/bin
-    mkdir lib
-    cd lib
-    curl -LOs https://repo1.maven.org/maven2/com/puppycrawl/tools/checkstyle/10.21.2/checkstyle-10.21.2-all.jar
-    curl -LOs https://repo1.maven.org/maven2/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar
-    curl -LOs https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar
-    cd ../../..
-    mkdir -p /opt/codecheck/repo 
-        # If this fails, use sudo and give yourself ownership of /opt/codecheck and /opt/codecheck/repo
-    cp -R comrun/bin/* /opt/codecheck
-    chmod +x /opt/codecheck/comrun
-    sudo useradd -u 1012 -ms /bin/bash comrunner
+```
+sudo useradd -u 1012 -ms /bin/bash comrunner
+
+mkdir -p /opt/codecheck/repo 
+# If this fails, use sudo and give yourself ownership of /opt/codecheck and /opt/codecheck/repo
+
+cd path/to/codecheck3 # if not already there
+chmod +x cli/codecheck
+mkdir cli/lib
+cd cli/lib
+curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.6.4/jackson-core-2.6.4.jar
+curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.6.4/jackson-annotations-2.6.4.jar
+curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.6.4/jackson-databind-2.6.4.jar
+cd ../..
+
+cp -R comrun/bin/* /opt/codecheck
+cd /opt/codecheck
+chmod +x comrun interleaveio.py
+npm init -y
+npm install formidable@1.2.6
+mkdir lib
+cd lib
+curl -LOs https://repo1.maven.org/maven2/com/puppycrawl/tools/checkstyle/10.21.2/checkstyle-10.21.2-all.jar
+curl -LOs https://repo1.maven.org/maven2/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar
+curl -LOs https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar
+
+```
 
 ## Special Steps for Github Codespaces
 
@@ -86,7 +95,7 @@ Type the following into the terminal without hitting Enter:
 sdk default java 25
 ```
 
-Now hit the Tab key. It should autocomplete to something like `25.0.7-ms`. Then hit Enter.
+Now hit the Tab key. It should autocomplete to something like `25.0.2-ms`. Then hit Enter.
 
 Type
 
@@ -94,20 +103,23 @@ Type
 java -version
 ```
 
-and see that you get a Java 21 version. 
+and see that you get a Java 25 version. 
 
 ## Building the Checker
 
 Build CodeCheck:
 
-    cd path/to/codecheck3 # i.e. whereever you cloned the repo
-        # On CodeSpaces, cd /workspaces/codecheck3
-    mvn package -Dmaven.test.skip
+```
+cd path/to/codecheck3 # i.e. whereever you cloned the repo
+    # On CodeSpaces, cd /workspaces/codecheck3
+mvn package -Dmaven.test.skip
+```
 
 Test that the checker works:
 
-    chmod +x cli/codecheck 
-    cli/codecheck -t samples/java/example1
+```
+cli/codecheck -t samples/java/example1
+```
 
 If you omit the `-t`, you get a report with your default browser instead
 of the text report. (Only locally, not in Codespaces.)
@@ -125,9 +137,9 @@ Select Run → Debug...
 -   Name: Command Line Tool
 -   Main class: `com.horstmann.codecheck.checker.Main`
 -   Program arguments:
-
-        -Duser.language=en -Duser.country=US -Dcom.horstmann.codecheck.comrun.local=/opt/codecheck/comrun -Dcom.horstmann.codecheck.report=HTML -Dcom.horstmann.codecheck.debug /tmp/submission /tmp/problem
-
+```
+-Duser.language=en -Duser.country=US -Dcom.horstmann.codecheck.comrun.local=/opt/codecheck/comrun -Dcom.horstmann.codecheck.report=HTML -Dcom.horstmann.codecheck.debug /tmp/submission /tmp/problem
+```
 -   Environment variable `COMRUN_USER=`(your username)
 
 Use this debugging configuration to debug the command line tool. Use the already prepared `codecheck-webapp` configuration to debug the server. 
@@ -198,9 +210,11 @@ Review the configuration in `src/main/resources/application.properties`. (The de
 
 Run the `codecheck-webapp` server:
 
-    cd path/to/codecheck3 # i.e. whereever you cloned the repo
-        # On CodeSpaces, cd /workspaces/codecheck3
-    COMRUN_USER=$(whoami) mvn quarkus:dev
+```
+cd path/to/codecheck3 # i.e. whereever you cloned the repo
+    # On CodeSpaces, cd /workspaces/codecheck3
+COMRUN_USER=$(whoami) mvn quarkus:dev
+```
 
 Point your browser to <http://localhost:8080/assets/uploadProblem.html>.
 Upload a problem and test it.
@@ -233,31 +247,41 @@ sudo touch /etc/containers/nodocker
 
 Build and run the Docker container for the `comrun` service:
 
-    cd path/to/codecheck3 # i.e. whereever you cloned the repo
-        # On CodeSpaces, cd /workspaces/codecheck3
-    docker build --tag comrun:1.0-SNAPSHOT comrun
-    docker run -p 8080:8080 -it comrun:1.0-SNAPSHOT &
+```
+cd path/to/codecheck3 # i.e. whereever you cloned the repo
+    # On CodeSpaces, cd /workspaces/codecheck3
+docker build --tag comrun:1.0-SNAPSHOT comrun
+docker run -p 8080:8080 -it comrun:1.0-SNAPSHOT &
+```
 
 Test that it works:
 
-    cli/codecheck -lt samples/java/example1
+```
+cli/codecheck -lt samples/java/example1
+```
 
 Build the Docker container for the `codecheck-webapp` server. 
 
-    LOCAL_TAG=codecheck-webapp:1.0-SNAPSHOT
-    mvn clean package -Dmaven.test.skip
-    docker build --tag $LOCAL_TAG -f src/main/docker/Dockerfile.jvm .
-    
+```
+LOCAL_TAG=codecheck-webapp:1.0-SNAPSHOT
+mvn clean package -Dmaven.test.skip
+docker build --tag $LOCAL_TAG -f src/main/docker/Dockerfile.jvm .
+```
+
 Run the container. If you do this on your own computer:
 
-    docker run -p 9090:8080 -it codecheck-webapp:1.0-SNAPSHOT
-    
+```
+docker run -p 9090:8080 -it codecheck-webapp:1.0-SNAPSHOT
+```
+
 Test that it works by pointing your browser to
 <http://localhost:9090/assets/uploadProblem.html>.     
 
 On Codespaces:
 
-    docker run -p 9090:8080 -it --add-host host.docker.internal:host-gateway codecheck-webapp:1.0-SNAPSHOT &
+```
+docker run -p 9090:8080 -it --add-host host.docker.internal:host-gateway codecheck-webapp:1.0-SNAPSHOT &
+```
 
 Then locate the Ports tab and open the local address for port 9090. Ignore the nginx error and paste `/assets/uploadProblem.html` after the URL. 
 
@@ -284,8 +308,7 @@ Kill both containers by running this command in the terminal:
 
     docker container kill $(docker ps -q)    
 
-Comrun Service Deployment on AWS
---------------------------------
+# Comrun Service Deployment on AWS
 
 [Install the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
@@ -445,9 +468,11 @@ the comrun service was deployed.
 
 To test that the service is working properly, do this:
 
-    cd path-to-codecheck2-repo
-    export REMOTE_URL=service-URL
-    /opt/codecheck/codecheck -rt samples/java/example1
+```
+cd path-to-codecheck-repo
+export REMOTE_URL=service-URL
+/opt/codecheck/codecheck -rt samples/java/example1
+```
 
 You should get a report that was obtained by sending the compile and run
 jobs to your remote service.
@@ -455,10 +480,11 @@ jobs to your remote service.
 Alternatively, you can test with the locally running web app. In
 `src/main/resources/application-prod.properties`, you need to add
 
-    com.horstmann.codecheck.comrun.remote=service-URL/api/upload    
+```
+com.horstmann.codecheck.comrun.remote=service-URL/api/upload
+````
 
-Using AWS Data Storage
-----------------------
+# Using AWS Data Storage
 
 Set environment variables and create a user in your Amazon AWS account:
 
@@ -610,8 +636,7 @@ echo Password: $PASSWORD
 aws dynamodb put-item --table-name CodeCheckLTICredentials --item '{"oauth_consumer_key":{"S":"'${USERNAME}'"},"shared_secret":{"S":"'${PASSWORD}'"}}'
 ```
 
-Server Deployment (AWS)
------------------------
+# Server Deployment (AWS)
 
 Make another ECR repository to store in the codecheck-webapp service. Note that you need the `ACCOUNT_ID` and `REGION` environment variables from the comrun deployment.
 
@@ -688,8 +713,7 @@ Make note of the service URL. Then wait until it has the service status as  `RUN
 You will get a URL for the service. Now point your browser to
 `https://service url/assets/uploadProblem.html`
 
-SQL Data Storage (Alternative to AWS S3 and Dynamo)
----------------------------------------------------
+# SQL Data Storage (Alternative to AWS S3 and Dynamo)
 
 If you have access to a SQL database or want to use a free tier for testing, SQL data storage is much simpler to configure than AWS S3 and Dynamo. However, it is likely to be more expensive in the long run.
 

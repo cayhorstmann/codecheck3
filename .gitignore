@@ -2,8 +2,12 @@
 **/*.class
 **/*.zip
 **/*.jar
+comrun/bin/node_modules
+comrun/bin/package.json
+comrun/bin/package-lock.json
 todo.txt
 deploy
+local
 **/application-*.properties
 
 
