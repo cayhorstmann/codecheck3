@@ -19,9 +19,9 @@ The `codecheck-webapp` program has these responsibilities:
 
 ## Prepare your environment
 
-If you are running Linux or Github Codespaces, you don't need to install Ubuntu 24.04. Otherwise, make yourself a virtual machine. These instructions should be helpful: https://horstmann.com/pfh/2021/vm.html (but use the Ubuntu 24.04 ISO).
+If you are running Linux or [github.com/codespaces](Github Codespaces), you don't need to install Ubuntu 24.04. Otherwise, make yourself a virtual machine. These instructions should be helpful: https://horstmann.com/pfh/2021/vm.html (but use the Ubuntu 24.04 ISO).
 
-If you are using Codespaces, make a new codespace for the repository `cayhorstmann/codecheck3`
+If you are using Codespaces, clone the repository `cayhorstmann/codecheck3` and make a codespace from your clone.
 
 ## Building the Command Line Tool
 
@@ -29,7 +29,7 @@ Install some packages:
 
 ```
 sudo apt update
-sudo apt -y install openjdk-21-jdk maven git curl zip unzip
+sudo apt -y install openjdk-25-jdk maven git curl zip unzip
 ```
 
 Clone the repo (unless you are in Codespaces, where it is already cloned)
@@ -83,10 +83,10 @@ sudo setfacl -PRdm u::rwx,g::rx,o::rx /tmp
 Type the following into the terminal without hitting Enter:
 
 ```
-sdk default java 21
+sdk default java 25
 ```
 
-Now hit the Tab key. It should autocomplete to something like `21.0.7-ms`. Then hit Enter.
+Now hit the Tab key. It should autocomplete to something like `25.0.7-ms`. Then hit Enter.
 
 Type
 

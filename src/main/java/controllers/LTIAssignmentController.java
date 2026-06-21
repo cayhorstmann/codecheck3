@@ -86,7 +86,8 @@ public Response contentSelection(MultivaluedMap<String, String> formParams)
         throws IOException, InvalidKeyException, LtiSigningException {
         try {
             var signer = new LtiOauthSigner();
-            String json = String.format(content_item.replace("\n", ""), formParams.get("problem_url").getFirst());
+            String json = String.format(content_item.replace("\n", ""), formParams.get("assignment" +
+                    "_url").getFirst());
             var request = new HashMap<String, String>();
             request.put("lti_message_type", "ContentItemSelection");
             request.put("lti_version", "LTI-1p0");
@@ -317,8 +318,8 @@ public Response contentSelection(MultivaluedMap<String, String> formParams)
                 <html>
                     <body>
                         <form method="post" action="%s">
-                            <label for="problem_url">Enter a CodeCheck Problem URL:</label><br>
-                            <input type="text" name="problem_url"/>
+                            <label for="assignment_url">Enter a CodeCheck assignment URL:</label><br>
+                            <input type="text" name="assignment_url" size="60"/>
                 """;
 
     private String contentSelectionReturnForm = """
