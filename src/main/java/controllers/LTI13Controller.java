@@ -45,15 +45,16 @@ public class LTI13Controller {
             Instant createdAt) {
     }
 
-    @GET
+    @POST
     @Path("/login")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response login(
-            @QueryParam("iss") String issuer,
-            @QueryParam("login_hint") String loginHint,
-            @QueryParam("target_link_uri") String targetLinkUri,
-            @QueryParam("client_id") String incomingClientId,
-            @QueryParam("lti_message_hint") String messageHint,
-            @QueryParam("lti_deployment_id") String deploymentId) {
+        @FormParam("iss") String issuer,
+        @FormParam("login_hint") String loginHint,
+        @FormParam("target_link_uri") String targetLinkUri,
+        @FormParam("client_id") String incomingClientId,
+        @FormParam("lti_message_hint") String messageHint,
+        @FormParam("lti_deployment_id") String deploymentId) {
 
         System.out.println("LTI 1.3 login initiation was received");
         System.out.println("Issuer: " + issuer);
@@ -103,13 +104,17 @@ public class LTI13Controller {
                 .queryParam("nonce", nonce);
 
         if (messageHint != null && !messageHint.isBlank()) {
-            authorizationRequest.queryParam(
-                    "lti_message_hint",
-                    messageHint
-            );
-        }
+                String encodedMessageHint = java.net.URLEncoder.encode(
+                        messageHint,
+                        java.nio.charset.StandardCharsets.UTF_8
+    );
+        authorizationRequest.queryParam(
+            "lti_message_hint",
+            encodedMessageHint
+    );
+}
 
-        URI redirect = authorizationRequest.build();
+        URI redirect = authorizationRequest.buildFromEncoded();
 
         System.out.println("Redirecting browser to Moodle authorization");
 

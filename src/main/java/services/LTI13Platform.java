@@ -19,7 +19,7 @@ public final class LTI13Platform {
             "horstmann.com Moodle";
 
     public static final String CLIENT_ID =
-            "8EBnFTP5KUoBAfm";
+            "8O4Yedgjt6hpmHd";
 
     public static final String AUTHORIZATION_ENDPOINT =
             "https://moodle.horstmann.com/mod/lti/auth.php";
