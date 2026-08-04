@@ -121,10 +121,10 @@ public class LTI13Controller {
         return Response.seeOther(redirect).build();
     }
 
-    @POST
+    @POST 
     @Path("/deeplink")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    @Produces(MediaType.TEXT_PLAIN)
+    @Produces(MediaType.TEXT_HTML)
     public Response deepLink(
             @FormParam("state") String state,
             @FormParam("id_token") String idToken) {

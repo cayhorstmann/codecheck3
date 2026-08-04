@@ -1,0 +1,27 @@
+[1mdiff --git a/src/main/java/controllers/LTI13Controller.java b/src/main/java/controllers/LTI13Controller.java[m
+[1mindex f911a1c..d65c48f 100644[m
+[1m--- a/src/main/java/controllers/LTI13Controller.java[m
+[1m+++ b/src/main/java/controllers/LTI13Controller.java[m
+[36m@@ -121,10 +121,10 @@[m [mpublic class LTI13Controller {[m
+         return Response.seeOther(redirect).build();[m
+     }[m
+ [m
+[31m-    @POST[m
+[32m+[m[32m    @POST[m[41m [m
+     @Path("/deeplink")[m
+     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)[m
+[31m-    @Produces(MediaType.TEXT_PLAIN)[m
+[32m+[m[32m    @Produces(MediaType.TEXT_HTML)[m
+     public Response deepLink([m
+             @FormParam("state") String state,[m
+             @FormParam("id_token") String idToken) {[m
+[1mdiff --git a/src/main/resources/application.properties b/src/main/resources/application.properties[m
+[1mindex c12a36c..614b8f6 100644[m
+[1m--- a/src/main/resources/application.properties[m
+[1m+++ b/src/main/resources/application.properties[m
+[36m@@ -6,4 +6,4 @@[m [mcom.horstmann.codecheck.home=assets/uploadProblem.html[m
+ quarkus.http.port=8080[m
+ quarkus.index-dependency.resteasy-multipart.group-id=org.jboss.resteasy[m
+ quarkus.index-dependency.resteasy-multipart.artifact-id=resteasy-multipart-provider[m
+[31m-[m
+[32m+[m[32mquarkus.http.access-log.enabled=true[m
