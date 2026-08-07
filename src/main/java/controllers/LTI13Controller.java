@@ -12,6 +12,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriBuilder;
 import services.LTI13Platform;
+import services.LTI13KeyService;
+import services.LTI13TokenVerifier;
 
 import java.net.URI;
 import java.time.Instant;
@@ -20,7 +22,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import jakarta.inject.Inject;
-import services.LTI13KeyService;
 
 @RequestScoped
 @Path("/LTI/1.3")
@@ -28,6 +29,10 @@ public class LTI13Controller {
 
     @Inject
     LTI13KeyService keyService;
+
+    @Inject
+    LTI13TokenVerifier tokenVerifier;
+    
 
     @GET
     @Path("/keys")
@@ -121,27 +126,36 @@ public class LTI13Controller {
         return Response.seeOther(redirect).build();
     }
 
-    @POST 
+    @POST
     @Path("/deeplink")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_HTML)
     public Response deepLink(
-            @FormParam("state") String state,
-            @FormParam("id_token") String idToken) {
+        @FormParam("state") String state,
+        @FormParam("id_token") String idToken) {
 
-        System.out.println("LTI 1.3 deeplink endpoint was reached");
-        System.out.println("State was present: " + (state != null));
-        System.out.println("ID token was present: " + (idToken != null));
+    System.out.println("LTI 1.3 deeplink endpoint was reached");
+    System.out.println("State was present: " + (state != null));
+    System.out.println("ID token was present: " + (idToken != null));
+
+    try {
+        var claims = tokenVerifier.verify(idToken);
+
+        System.out.println("JWT signature verified");
+        System.out.println("Issuer: " + claims.getIssuer());
+
+        return Response.ok("JWT signature verified successfully")
+                .build();
+
+    } catch (Exception e) {
+        System.out.println("JWT verification failed: " + e.getMessage());
 
         return Response.status(Response.Status.UNAUTHORIZED)
-                .entity("""
-                        Moodle reached the CodeCheck LTI 1.3 deep-link endpoint.
-
-                        The request was received, but JWT authentication
-                        has not been implemented yet.
-                        """)
+                .entity("JWT verification failed")
                 .build();
     }
+} 
+                
 
     @POST
     @Path("/launch")
