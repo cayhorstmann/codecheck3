@@ -12,12 +12,17 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.security.PrivateKey;
+import java.security.spec.PKCS8EncodedKeySpec;
 
 @ApplicationScoped
 public class LTI13KeyService {
 
     private static final String PUBLIC_KEY_PATH =
             ".secrets/lti13/public.pem";
+
+    private static final String PRIVATE_KEY_PATH =
+            ".secrets/lti13/private.pem";
 
     private static final String KEY_ID =
             "codecheck-dev-key-1";
@@ -37,6 +42,31 @@ public class LTI13KeyService {
         return Map.of("keys", List.of(jwk));
     }
 
+    public PrivateKey getPrivateKey() {
+    try {
+        String pem = Files.readString(Path.of(PRIVATE_KEY_PATH))
+                .replace("-----BEGIN PRIVATE KEY-----", "")
+                .replace("-----END PRIVATE KEY-----", "")
+                .replaceAll("\\s", "");
+
+        byte[] encodedKey =
+                Base64.getDecoder().decode(pem);
+
+        PKCS8EncodedKeySpec keySpec =
+                new PKCS8EncodedKeySpec(encodedKey);
+
+        KeyFactory keyFactory =
+                KeyFactory.getInstance("RSA");
+
+        return keyFactory.generatePrivate(keySpec);
+
+    } catch (Exception exception) {
+        throw new IllegalStateException(
+                "Could not load the LTI 1.3 private key",
+                exception
+        );
+    }
+}
     private RSAPublicKey readPublicKey() {
         try {
             String pem = Files.readString(Path.of(PUBLIC_KEY_PATH))
