@@ -52,6 +52,7 @@ public class LTI13Controller {
 
     private record PendingLogin(
             String nonce,
+            String clientId,
             String targetLinkUri,
             Instant createdAt) {
     }
@@ -65,8 +66,7 @@ public class LTI13Controller {
         @FormParam("target_link_uri") String targetLinkUri,
         @FormParam("client_id") String incomingClientId,
         @FormParam("lti_message_hint") String messageHint,
-        @FormParam("lti_deployment_id") String deploymentId) {
-
+        @FormParam("lti_deployment_id") String deploymentId) {        
         System.out.println("LTI 1.3 login initiation was received");
         System.out.println("Issuer: " + issuer);
         System.out.println("Incoming client ID: " + incomingClientId);
@@ -93,13 +93,18 @@ public class LTI13Controller {
                     .build();
         }
 
-        String clientId = LTI13Platform.CLIENT_ID;
+        if (incomingClientId == null || incomingClientId.isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity("The client_id parameter was missing.")
+                .build();
+        }
+
         String state = UUID.randomUUID().toString();
         String nonce = UUID.randomUUID().toString();
 
         PENDING_LOGINS.put(
                 state,
-                new PendingLogin(nonce, targetLinkUri, Instant.now())
+            new PendingLogin(nonce, incomingClientId, targetLinkUri, Instant.now())
         );
 
         UriBuilder authorizationRequest = UriBuilder
@@ -108,7 +113,7 @@ public class LTI13Controller {
                 .queryParam("response_type", "id_token")
                 .queryParam("response_mode", "form_post")
                 .queryParam("prompt", "none")
-                .queryParam("client_id", clientId)
+                .queryParam("client_id", incomingClientId)
                 .queryParam("redirect_uri", targetLinkUri)
                 .queryParam("login_hint", loginHint)
                 .queryParam("state", state)
@@ -251,6 +256,7 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
                 <input type="hidden" name="deep_link_return_url" value="%s">
 
                 <input type="hidden" name="deployment_id" value="%s">
+                <input type="hidden" name="client_id" value="%s">
                 <input type="hidden" name="data" value="%s">
 
                 <button type="submit">Use This Problem</button>
@@ -260,6 +266,7 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
         """.formatted(
             deepLinkReturnUrl,
             deploymentId,
+            pending.clientId(),
             deepLinkData == null ? "" : deepLinkData
 );
 
@@ -284,6 +291,7 @@ return Response.ok(html)
         @FormParam("problem_id") String problemId,
         @FormParam("deep_link_return_url") String deepLinkReturnUrl,
         @FormParam("deployment_id") String deploymentId,
+        @FormParam("client_id") String clientId,
         @FormParam("data") String deepLinkData) {
 
     System.out.println("Problem selection received");
@@ -306,6 +314,7 @@ return Response.ok(html)
 
     String responseJwt =
         deepLinkResponseService.createResponseJwt(
+            clientId,
                 deploymentId,
                 contentItems,
                 deepLinkData
