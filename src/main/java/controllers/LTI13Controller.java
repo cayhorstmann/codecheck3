@@ -371,14 +371,14 @@ return Response.ok(returnHtml)
 }
 
    @POST
-   @Path("/problem/{problemId}")
+   @Path("/problem")
    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
    @Produces(MediaType.TEXT_HTML)
    public Response problemLaunch(
-        @PathParam("problemId") String problemId,
         @FormParam("state") String state,
         @FormParam("id_token") String idToken) {
 
+    var problemId = "TODO: get from state or id_token"; // Placeholder for actual problem ID extraction logic
     System.out.println("LTI 1.3 problem launch endpoint was reached");
     System.out.println("Problem ID: " + problemId);
     System.out.println("State was present: " + (state != null));
