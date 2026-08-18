@@ -51,9 +51,12 @@ public class LTI13Controller {
             new ConcurrentHashMap<>();
 
     private record PendingLogin(
-            String nonce,
-            String targetLinkUri,
-            Instant createdAt) {
+        String nonce,
+        String targetLinkUri,
+        String issuer,
+        String clientId,
+        Instant createdAt) {
+
     }
 
     @POST
@@ -75,11 +78,35 @@ public class LTI13Controller {
         System.out.println("Login hint was present: " + (loginHint != null));
         System.out.println("Message hint was present: " + (messageHint != null));
 
-        if (!LTI13Platform.ISSUER.equals(issuer)) {
+        if (issuer == null || issuer.isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("Unknown Moodle issuer.")
-                    .build();
+                .entity("The issuer parameter was missing.")
+                .build();
         }
+
+        URI issuerUri;
+        
+        try {
+            issuerUri = URI.create(issuer);
+        } catch (IllegalArgumentException exception) {
+            return Response.status(Response.Status.BAD_REQUEST)
+            .entity("The issuer parameter was invalid.")
+            .build();
+}
+
+        if (!"https".equalsIgnoreCase(issuerUri.getScheme())
+                || issuerUri.getHost() == null) { 
+            return Response.status(Response.Status.BAD_REQUEST)
+            .entity("The issuer must be a valid HTTPS URL.")
+            .build();
+        }
+            
+        String authorizationEndpoint =
+            issuer.replaceAll("/+$", "")
+            + "/mod/lti/auth.php";
+                
+        System.out.println("Authorization endpoint: "
+            + authorizationEndpoint);
 
         if (loginHint == null || loginHint.isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -93,26 +120,40 @@ public class LTI13Controller {
                     .build();
         }
 
-        String clientId = LTI13Platform.CLIENT_ID;
+        if (incomingClientId == null || incomingClientId.isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+            .entity("The client_id parameter was missing.")
+            .build();
+}
+
+        String clientId = incomingClientId;
         String state = UUID.randomUUID().toString();
         String nonce = UUID.randomUUID().toString();
 
         PENDING_LOGINS.put(
-                state,
-                new PendingLogin(nonce, targetLinkUri, Instant.now())
-        );
+        state,
+        new PendingLogin(
+                nonce,
+                targetLinkUri,
+                issuer,
+                clientId,
+                Instant.now()
+        )
+);
 
-        UriBuilder authorizationRequest = UriBuilder
-                .fromUri(LTI13Platform.AUTHORIZATION_ENDPOINT)
-                .queryParam("scope", "openid")
-                .queryParam("response_type", "id_token")
-                .queryParam("response_mode", "form_post")
-                .queryParam("prompt", "none")
-                .queryParam("client_id", clientId)
-                .queryParam("redirect_uri", targetLinkUri)
-                .queryParam("login_hint", loginHint)
-                .queryParam("state", state)
-                .queryParam("nonce", nonce);
+String redirectUri = targetLinkUri;
+
+UriBuilder authorizationRequest = UriBuilder
+        .fromUri(authorizationEndpoint)
+        .queryParam("scope", "openid")
+        .queryParam("response_type", "id_token")
+        .queryParam("response_mode", "form_post")
+        .queryParam("prompt", "none")
+        .queryParam("client_id", clientId)
+        .queryParam("redirect_uri", redirectUri)
+        .queryParam("login_hint", loginHint)
+        .queryParam("state", state)
+        .queryParam("nonce", nonce);
 
         if (messageHint != null && !messageHint.isBlank()) {
                 String encodedMessageHint = java.net.URLEncoder.encode(
@@ -124,6 +165,7 @@ public class LTI13Controller {
             encodedMessageHint
     );
 }
+        System.out.println("OIDC redirect URI: " + redirectUri);
 
         URI redirect = authorizationRequest.buildFromEncoded();
 
@@ -155,7 +197,10 @@ public class LTI13Controller {
 }
 
     try {
-        var claims = tokenVerifier.verify(idToken);
+        var claims = tokenVerifier.verify(
+            idToken,
+            pending.issuer()
+);
 
         String deploymentId = claims.get(
         "https://purl.imsglobal.org/spec/lti/claim/deployment_id",
@@ -232,6 +277,15 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
         System.out.println("JWT signature verified");
         System.out.println("Issuer: " + claims.getIssuer());
 
+        URI targetUri = URI.create(pending.targetLinkUri());
+
+        String toolBaseUrl =
+            targetUri.getScheme()
+            + "://"
+            + targetUri.getAuthority();
+
+        System.out.println("Tool base URL: " + toolBaseUrl);
+
         PENDING_LOGINS.remove(state);
 
 
@@ -249,18 +303,24 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
                 <input type="text" id="problemId" name="problem_id" required>
 
                 <input type="hidden" name="deep_link_return_url" value="%s">
-
                 <input type="hidden" name="deployment_id" value="%s">
                 <input type="hidden" name="data" value="%s">
+                
+                <input type="hidden" name="platform_issuer" value="%s">
+                <input type="hidden" name="client_id" value="%s">
+                <input type="hidden" name="tool_base_url" value="%s">
 
                 <button type="submit">Use This Problem</button>
             </form>
         </body>
         </html>
         """.formatted(
-            deepLinkReturnUrl,
-            deploymentId,
-            deepLinkData == null ? "" : deepLinkData
+        deepLinkReturnUrl,
+        deploymentId,
+        deepLinkData == null ? "" : deepLinkData,
+        pending.issuer(),
+        pending.clientId(),
+        toolBaseUrl
 );
 
 return Response.ok(html)
@@ -279,26 +339,53 @@ return Response.ok(html)
     @POST
     @Path("/select-problem")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    @Produces(MediaType.TEXT_PLAIN)
+    @Produces(MediaType.TEXT_HTML)
     public Response selectProblem(
         @FormParam("problem_id") String problemId,
         @FormParam("deep_link_return_url") String deepLinkReturnUrl,
         @FormParam("deployment_id") String deploymentId,
-        @FormParam("data") String deepLinkData) {
+        @FormParam("data") String deepLinkData,
+        @FormParam("platform_issuer") String platformIssuer,
+        @FormParam("client_id") String clientId,
+        @FormParam("tool_base_url") String toolBaseUrl) {
 
     System.out.println("Problem selection received");
+    System.out.println("Platform issuer: " + platformIssuer);
+    System.out.println("Client ID present: "
+    + (clientId != null && !clientId.isBlank()));
     System.out.println("Problem ID: " + problemId);
-    String problemUrl =
-        "https://probable-space-telegram-vp5754jjgwjhwqgx-8080.app.github.dev"
-        + "/LTI/1.3/problem/"
-        + problemId;
-    System.out.println("Problem URL: " + problemUrl);     
+    
+    if (platformIssuer == null || platformIssuer.isBlank()) {
+        return Response.status(Response.Status.BAD_REQUEST)
+            .entity("Missing platform issuer")
+            .build();
+}
 
+    if (clientId == null || clientId.isBlank()) {
+        return Response.status(Response.Status.BAD_REQUEST)
+            .entity("Missing client ID")
+            .build();
+}
+
+    if (toolBaseUrl == null || toolBaseUrl.isBlank()) {
+        return Response.status(Response.Status.BAD_REQUEST)
+            .entity("Missing tool base URL")
+            .build();
+}
+
+    String launchUrl =
+        toolBaseUrl + "/LTI/1.3/launch";
+    
+    System.out.println("Launch URL: " + launchUrl);
+    
     Map<String, Object> contentItem = Map.of(
         "type", "ltiResourceLink",
-        "title", "CodeCheck Problem",
-        "url", problemUrl
-);
+        "title", "CodeCheck",
+        "url", launchUrl,
+        "custom", Map.of(
+                "problem_id", problemId
+        )
+    );
 
     System.out.println("Content item created: " + contentItem);
 
@@ -306,6 +393,8 @@ return Response.ok(html)
 
     String responseJwt =
         deepLinkResponseService.createResponseJwt(
+                clientId,
+                platformIssuer,
                 deploymentId,
                 contentItems,
                 deepLinkData
