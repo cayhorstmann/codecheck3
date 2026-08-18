@@ -13,7 +13,7 @@ public final class LTI13Platform {
     }
 
     public static final String ISSUER =
-            "https://moodle.horstmann.com";
+            "https://moodle2.horstmann.com";
 
     public static final String NAME =
             "horstmann.com Moodle";
@@ -22,11 +22,11 @@ public final class LTI13Platform {
             "8O4Yedgjt6hpmHd";
 
     public static final String AUTHORIZATION_ENDPOINT =
-            "https://moodle.horstmann.com/mod/lti/auth.php";
+            "https://moodle2.horstmann.com/mod/lti/auth.php";
 
     public static final String ACCESS_TOKEN_ENDPOINT =
-            "https://moodle.horstmann.com/mod/lti/token.php";
+            "https://moodle2.horstmann.com/mod/lti/token.php";
 
     public static final String JWKS_ENDPOINT =
-            "https://moodle.horstmann.com/mod/lti/certs.php";
+            "https://moodle2.horstmann.com/mod/lti/certs.php";
 }

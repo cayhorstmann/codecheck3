@@ -1,0 +1,12 @@
+{
+  "name": "CodeCheck",
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "Quarkus",
+      "onAutoForward": "notify",
+      "visibility": "public"
+    }
+  },
+  "postAttachCommand": "gh codespace ports visibility 8080:public -c \"$CODESPACE_NAME\""
+}
