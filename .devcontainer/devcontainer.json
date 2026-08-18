@@ -1,5 +1,13 @@
 {
   "name": "CodeCheck",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "redhat.vscode-quarkus"
+      ]
+    }
+  },
   "forwardPorts": [8080],
   "portsAttributes": {
     "8080": {
