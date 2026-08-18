@@ -75,11 +75,13 @@ public class LTI13Controller {
         System.out.println("Login hint was present: " + (loginHint != null));
         System.out.println("Message hint was present: " + (messageHint != null));
 
+        /*
         if (!LTI13Platform.ISSUER.equals(issuer)) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("Unknown Moodle issuer.")
                     .build();
         }
+                     */
 
         if (loginHint == null || loginHint.isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST)
