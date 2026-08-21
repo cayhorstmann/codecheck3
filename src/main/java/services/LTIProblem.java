@@ -1,5 +1,6 @@
 package services;
 
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -10,6 +11,7 @@ import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,6 +35,30 @@ public class LTIProblem {
     @Inject CodeCheck codeCheck;
     @Inject Config config;
     @Inject Assignment assignmentService;
+    @Inject LTI13AGSService agsService;
+
+    private final Map<String, LTI13AGSContext> lti13AgsContexts =
+        new ConcurrentHashMap<>();
+
+    private record LTI13AGSContext(
+        String lineItemId,
+        String userId) {
+}
+
+    public void registerLTI13AGSContext(
+        String submissionId,
+        String lineItemId,
+        String userId) {
+
+    lti13AgsContexts.put(
+            submissionId,
+            new LTI13AGSContext(
+                    lineItemId,
+                    userId
+            )
+    );
+}
+
 
     private ObjectNode ltiNode(String url, Map<String, String[]> postParams) {
         if (!lti.validate(url, postParams)) throw new ServiceException("Failed OAuth validation");
@@ -105,65 +131,124 @@ public class LTIProblem {
         return document;
     }       
     
-    public String launchCodeCheck(String url, String repo, String problemName, String ccid, Map<String, String[]> postParams) throws NoSuchMethodException, IOException, ScriptException {
-        // TODO: Now the client will do the LTI communication. CodeCheck should do it.
-        ObjectNode ltiNode = ltiNode(url, postParams);
-        Map<Path, byte[]> problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
-        Problem problem = new Problem(problemFiles);
-        Problem.DisplayData data = problem.getProblemData();
-        ObjectNode problemNode = Util.toJson(data);
-        problemNode.put("url", "/checkNJS"); 
-        problemNode.put("repo", repo);
-        problemNode.put("problem", problemName);
-        problemNode.remove("description"); // TODO: Or let node render it? 
-        String qid = "codecheck-" + repo + "-" + problemName;
-        String document = "<?xml version='1.0' encoding='UTF-8'?>\n" + 
-            "<html xmlns='http://www.w3.org/1999/xhtml'>\n" + 
-            "  <head>\n" + 
-            "    <meta http-equiv='content-type' content='text/html; charset=UTF-8'/>\n" + 
-            "    <title>Interactivities</title> \n" + 
-            "    <script src='/assets/download.js'></script>\n" + 
+    public String launchCodeCheck(
+        String url,
+        String repo,
+        String problemName,
+        String ccid,
+        Map<String, String[]> postParams)
+        throws NoSuchMethodException, IOException, ScriptException {
+
+    
+    ObjectNode ltiNode = ltiNode(url, postParams);
+
+    return renderCodeCheck(
+            repo,
+            problemName,
+            ccid,
+            ltiNode
+    );
+}
+
+public String launchCodeCheck13(
+        String repo,
+        String problemName,
+        String ccid,
+        String submissionId)
+        throws NoSuchMethodException, IOException, ScriptException {
+
+    ObjectNode ltiNode =
+            JsonNodeFactory.instance.objectNode();
+
+    ltiNode.put("submissionID", submissionId);
+
+    
+    ltiNode.put("retrieveURL", "/lti/retrieve");
+    ltiNode.put("sendURL", "/lti/send");
+
+    return renderCodeCheck(
+            repo,
+            problemName,
+            ccid,
+            ltiNode
+    );
+}
+    
+
+    private String renderCodeCheck(
+        String repo,
+        String problemName,
+        String ccid,
+        ObjectNode ltiNode)
+        throws NoSuchMethodException, IOException, ScriptException {
+
+    Map<Path, byte[]> problemFiles =
+            codeCheck.loadProblem(repo, problemName, ccid);
+
+    Problem problem = new Problem(problemFiles);
+    Problem.DisplayData data = problem.getProblemData();
+
+    ObjectNode problemNode = Util.toJson(data);
+
+    problemNode.put("url", "/checkNJS");
+    problemNode.put("repo", repo);
+    problemNode.put("problem", problemName);
+    problemNode.remove("description");
+
+    String qid =
+            "codecheck-" + repo + "-" + problemName;
+
+    String document =
+            "<?xml version='1.0' encoding='UTF-8'?>\n" +
+            "<html xmlns='http://www.w3.org/1999/xhtml'>\n" +
+            "  <head>\n" +
+            "    <meta http-equiv='content-type' content='text/html; charset=UTF-8'/>\n" +
+            "    <title>Interactivities</title> \n" +
+            "    <script src='/assets/download.js'></script>\n" +
             "    <script src='/assets/ace/ace.js'></script>\n" +
             "    <script src='/assets/ace/theme-kuroir.js'></script>\n" +
             "    <script src='/assets/ace/theme-chrome.js'></script>\n" +
             "    <script src='/assets/util.js'></script>\n" +
             "    <script src='/assets/codecheck2.js'></script>\n" +
             "    <script src='/assets/horstmann_codecheck.js'></script>\n" +
-            "    <link type='text/css' rel='stylesheet' href='/assets/codecheck.css'/>\n" + 
-            "    <link type='text/css' rel='stylesheet' href='/assets/horstmann_codecheck.css'/>\n" + 
-            "    <style type='text/css'>\n" + 
-            "      ol.interactivities > li {\n" + 
-            "        list-style: none;\n" + 
-            "        margin-bottom: 2em;\n" + 
-            "      }\n" + 
-            "      body {\n" + 
-            "        margin-left: 2em;\n" + 
-            "        margin-right: 2em;\n" + 
-            "        overflow-y: visible;\n" + 
-            "      }\n" + 
-            "    </style>\n" + 
+            "    <link type='text/css' rel='stylesheet' href='/assets/codecheck.css'/>\n" +
+            "    <link type='text/css' rel='stylesheet' href='/assets/horstmann_codecheck.css'/>\n" +
+            "    <style type='text/css'>\n" +
+            "      ol.interactivities > li {\n" +
+            "        list-style: none;\n" +
+            "        margin-bottom: 2em;\n" +
+            "      }\n" +
+            "      body {\n" +
+            "        margin-left: 2em;\n" +
+            "        margin-right: 2em;\n" +
+            "        overflow-y: visible;\n" +
+            "      }\n" +
+            "    </style>\n" +
             "    <script type='text/javascript'>//<![CDATA[\n" +
-            "horstmann_config.lti = " + ltiNode.toString() + 
+            "horstmann_config.lti = " + ltiNode.toString() +
             "\nhorstmann_codecheck.setup.push(\n" +
-            problemNode.toString() + 
+            problemNode.toString() +
             ")\n" +
-            "\n//]]></script>\n" + 
-            "  </head> \n" + 
-            "  <body>\n" + 
-            "    <p>Submission ID: " + ltiNode.get("submissionID").asText() + "</p>" +
+            "\n//]]></script>\n" +
+            "  </head> \n" +
+            "  <body>\n" +
+            "    <p>Submission ID: "
+            + ltiNode.get("submissionID").asText()
+            + "</p>" +
             "    <ol class='interactivities' id='interactivities'>\n" +
-            "      <li title='" + qid + "' id='" + qid + "'>\n" + 
+            "      <li title='" + qid + "' id='" + qid + "'>\n" +
             "        <div class='hc-included'>\n" +
             (data.description == null ? "" : data.description) +
-            "        </div>\n" + 
+            "        </div>\n" +
             "        <div class='horstmann_codecheck'>\n" +
-            "        </div>\n" + 
-            "      </li>\n" + 
+            "        </div>\n" +
+            "      </li>\n" +
             "    </ol>" +
             "  </body>" +
             "</html>";
-        return document;
-    }
+
+    return document;
+}
     
     private static String tracerStart = "<!DOCTYPE html>\n"
             + "<html>\n"
@@ -212,11 +297,74 @@ public class LTIProblem {
         submissionNode.put("score", score);
         storageConn.writeSubmission(submissionNode);
         
-        String outcomeServiceUrl = requestNode.get("lis_outcome_service_url").asText();
-        String sourcedID = requestNode.get("lis_result_sourcedid").asText();
-        String oauthConsumerKey = requestNode.get("oauth_consumer_key").asText();
-        if (!sourcedID.startsWith("__test__")) // TODO: Provide a test endpoint
-            lti.passbackGradeToLMS(outcomeServiceUrl, sourcedID, score, oauthConsumerKey);
+        JsonNode outcomeServiceUrlNode =
+            requestNode.get("lis_outcome_service_url");
+
+        JsonNode sourcedIDNode =
+            requestNode.get("lis_result_sourcedid");
+
+        JsonNode oauthConsumerKeyNode =
+            requestNode.get("oauth_consumer_key");
+
+        if (outcomeServiceUrlNode != null
+            && sourcedIDNode != null
+            && oauthConsumerKeyNode != null) {
+
+    String outcomeServiceUrl =
+            outcomeServiceUrlNode.asText();
+
+    String sourcedID =
+            sourcedIDNode.asText();
+
+    String oauthConsumerKey =
+            oauthConsumerKeyNode.asText();
+
+    if (!sourcedID.startsWith("__test__")) {
+        lti.passbackGradeToLMS(
+                outcomeServiceUrl,
+                sourcedID,
+                score,
+                oauthConsumerKey
+        );
+    }
+}
+
+    LTI13AGSContext agsContext =
+        lti13AgsContexts.get(submissionID);
+
+if (agsContext != null) {
+
+    try {
+        String agsToken =
+                agsService.getAccessToken(
+                        "https://purl.imsglobal.org/spec/lti-ags/scope/score"
+                );
+
+        System.out.println(
+                "LTI 1.3 AGS score token received: "
+                + (agsToken != null
+                && !agsToken.isBlank())
+        );
+
+        agsService.sendScore(
+                agsContext.lineItemId(),
+                agsToken,
+                agsContext.userId(),
+                score
+        );
+
+        System.out.println(
+                "LTI 1.3 grade return completed"
+        );
+
+    } catch (Exception exception) {
+
+        throw new ServiceException(
+                "LTI 1.3 AGS grade return failed: "
+                + exception.getMessage()
+        );
+    }
+}
 
         ObjectNode resultNode = JsonNodeFactory.instance.objectNode();
         resultNode.put("score", score);
@@ -225,9 +373,23 @@ public class LTIProblem {
     }
     
     public ObjectNode retrieve(JsonNode requestNode) throws IOException {
-        String submissionID = requestNode.get("submissionID").asText();
-        ObjectNode result = storageConn.readNewestSubmission(submissionID);
-        result.set("state", Util.fromJsonString(result.get("state").asText()));
+    String submissionID = requestNode.get("submissionID").asText();
+
+    ObjectNode result =
+            storageConn.readNewestSubmission(submissionID);
+
+    if (result == null) {
+        result = JsonNodeFactory.instance.objectNode();
+        result.putNull("state");
         return result;
-    }   
+    }
+
+    result.set(
+            "state",
+            Util.fromJsonString(result.get("state").asText())
+    );
+
+    return result;
+}
+
 }

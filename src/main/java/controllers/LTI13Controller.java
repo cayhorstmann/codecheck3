@@ -16,6 +16,9 @@ import services.LTI13Platform;
 import services.LTI13KeyService;
 import services.LTI13TokenVerifier;
 import services.LTI13DeepLinkResponseService;
+import services.LTI13AGSService;
+import services.LTIProblem;
+import services.CodeCheck;
 
 import java.net.URI;
 import java.time.Instant;
@@ -38,6 +41,12 @@ public class LTI13Controller {
 
     @Inject
     LTI13DeepLinkResponseService deepLinkResponseService;
+
+    @Inject
+    LTI13AGSService agsService;
+
+    @Inject
+    LTIProblem problemService;
     
 
     @GET
@@ -461,9 +470,11 @@ return Response.ok(returnHtml)
     System.out.println("Problem ID: " + problemId);
     System.out.println("State was present: " + (state != null));
     System.out.println("ID token was present: " + (idToken != null));
-        return Response.ok(
-            "LTI 1.3 problem launch reached for problem: " + problemId
-        ).build();
+    
+   return Response.ok(
+        "LTI 1.3 problem launch reached for problem: "
+        + problemId
+).build();
 }
 
     @POST
@@ -471,23 +482,341 @@ return Response.ok(returnHtml)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_HTML)
     public Response launch(
-            @FormParam("state") String state,
-            @FormParam("id_token") String idToken) {
+        @FormParam("state") String state,
+        @FormParam("id_token") String idToken) {
 
-        System.out.println("LTI 1.3 launch endpoint was reached");
-        System.out.println("State was present: " + (state != null));
-        System.out.println("ID token was present: " + (idToken != null));
+    System.out.println("LTI 1.3 launch endpoint was reached");
+    System.out.println("State was present: "
+            + (state != null && !state.isBlank()));
+    System.out.println("ID token was present: "
+            + (idToken != null && !idToken.isBlank()));
 
-        
-
-
-        return Response.status(Response.Status.UNAUTHORIZED)
-                .entity("""
-                        Moodle reached the CodeCheck LTI 1.3 launch endpoint.
-
-                        The request was received, but JWT authentication
-                        has not been implemented yet.
-                        """)
+    
+    if (state == null || state.isBlank()) {
+        return Response.status(Response.Status.BAD_REQUEST)
+                .entity("Missing state")
                 .build();
     }
+
+    if (idToken == null || idToken.isBlank()) {
+        return Response.status(Response.Status.BAD_REQUEST)
+                .entity("Missing id_token")
+                .build();
+    }
+
+    
+    PendingLogin pending = PENDING_LOGINS.get(state);
+
+    System.out.println("Pending login found: " + (pending != null));
+
+    if (pending == null) {
+        return Response.status(Response.Status.UNAUTHORIZED)
+                .entity("Unknown or expired state")
+                .build();
+    }
+
+    try {
+        
+        var claims = tokenVerifier.verify(
+                idToken,
+                pending.issuer()
+        );
+
+        System.out.println("JWT signature verified");
+
+        
+        
+        String returnedIssuer = claims.getIssuer();
+
+        System.out.println("Returned issuer: " + returnedIssuer);
+        System.out.println("Issuer matched: "
+                + pending.issuer().equals(returnedIssuer));
+
+        if (!pending.issuer().equals(returnedIssuer)) {
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Issuer mismatch")
+                    .build();
+        }
+
+        
+        String returnedNonce = claims.get("nonce", String.class);
+
+        System.out.println("Returned nonce was present: "
+                + (returnedNonce != null));
+
+        System.out.println("Nonce matched: "
+                + (returnedNonce != null
+                && pending.nonce().equals(returnedNonce)));
+
+        if (returnedNonce == null
+                || !pending.nonce().equals(returnedNonce)) {
+
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Nonce mismatch")
+                    .build();
+        }
+
+        
+        
+        Object messageType = claims.get(
+                "https://purl.imsglobal.org/spec/lti/claim/message_type"
+        );
+
+        System.out.println("LTI message type: " + messageType);
+
+        if (!"LtiResourceLinkRequest".equals(messageType)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(
+                        "This endpoint expected an LTI Resource Link Request."
+                    )
+                    .build();
+        }
+
+        
+        String deploymentId = claims.get(
+                "https://purl.imsglobal.org/spec/lti/claim/deployment_id",
+                String.class
+        );
+
+        System.out.println("Deployment ID present: "
+                + (deploymentId != null));
+
+        Object endpointObject = claims.get(
+        "https://purl.imsglobal.org/spec/lti-ags/claim/endpoint"
+);
+
+System.out.println(
+        "AGS endpoint claim: " + endpointObject
+);
+
+String agsToken = agsService.getAccessToken(
+         "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem"
+);
+
+System.out.println(
+        "AGS access token received: "
+        + (agsToken != null && !agsToken.isBlank())
+);
+
+String lineItemsUrl = null;
+
+if (endpointObject instanceof Map<?, ?> endpoint) {
+    Object lineItemsObject =
+            endpoint.get("lineitems");
+
+    if (lineItemsObject != null) {
+        lineItemsUrl =
+                lineItemsObject.toString();
+    }
+}
+
+System.out.println(
+        "AGS lineitems URL present: "
+        + (lineItemsUrl != null
+        && !lineItemsUrl.isBlank())
+);
+
+String lineItemsResponse = null;
+
+if (lineItemsUrl != null
+        && !lineItemsUrl.isBlank()) {
+
+    lineItemsResponse =
+            agsService.getLineItems(
+                    lineItemsUrl,
+                    agsToken
+            );
+
+    System.out.println(
+            "AGS lineitems response received: "
+            + (lineItemsResponse != null)
+    );
+
+    System.out.println(
+            "AGS lineitems response: "
+            + lineItemsResponse
+    );
+}
+        
+        Object customObject = claims.get(
+                "https://purl.imsglobal.org/spec/lti/claim/custom"
+        );
+
+        System.out.println("Custom claim present: "
+                + (customObject != null));
+
+        String problemId = null;
+
+        if (customObject instanceof Map<?, ?> custom) {
+            Object problemIdObject = custom.get("problem_id");
+
+            if (problemIdObject != null) {
+                problemId = problemIdObject.toString();
+            }
+        }
+
+        System.out.println("Problem ID from custom claim: " + problemId);
+
+        if (problemId == null || problemId.isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("Missing custom.problem_id")
+                    .build();
+        }
+
+
+    
+
+        String userId = claims.getSubject();
+        
+        
+        System.out.println("LTI user subject present: "
+            + (userId != null && !userId.isBlank()));
+            
+        if (userId == null || userId.isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity("Missing LTI subject")
+                .build();
+}
+
+    
+
+    Object resourceLinkObject = claims.get(
+        "https://purl.imsglobal.org/spec/lti/claim/resource_link"
+);
+
+    String resourceLinkId = null;
+
+        if (resourceLinkObject instanceof Map<?, ?> resourceLink) {
+            Object idObject = resourceLink.get("id");
+
+        if (idObject != null) {
+            resourceLinkId = idObject.toString();
+    }
+}
+
+        System.out.println(
+            "Resource Link ID present: "
+            + (resourceLinkId != null
+            && !resourceLinkId.isBlank())
+);
+
+
+    if (resourceLinkId == null
+        || resourceLinkId.isBlank()) {
+
+        return Response.status(Response.Status.BAD_REQUEST)
+            .entity("Missing resource link ID")
+            .build();
+}
+
+
+    if (lineItemsResponse != null
+        && "[]".equals(lineItemsResponse.trim())
+        && lineItemsUrl != null
+        && !lineItemsUrl.isBlank()) {
+
+    String createdLineItem =
+            agsService.createLineItem(
+                    lineItemsUrl,
+                    agsToken,
+                    resourceLinkId
+            );
+
+    System.out.println(
+            "AGS created lineitem response: "
+            + createdLineItem
+    );
+
+    lineItemsResponse = createdLineItem;
+}
+
+        String lineItemId =
+        agsService.extractLineItemId(
+                lineItemsResponse
+        );
+
+System.out.println(
+        "AGS lineitem ID present: "
+        + (lineItemId != null
+        && !lineItemId.isBlank())
+);
+
+if (lineItemId == null
+        || lineItemId.isBlank()) {
+
+    return Response.status(
+            Response.Status.BAD_REQUEST
+    )
+    .entity("Missing AGS lineitem ID")
+    .build();
+}
+
+
+
+
+
+
+
+        String submissionId =
+            "lti13:"
+            + pending.issuer()
+            + ":"
+            + resourceLinkId
+            + ":"
+            + userId;
+
+        problemService.registerLTI13AGSContext(
+        submissionId,
+        lineItemId,
+        userId
+);
+
+System.out.println(
+        "LTI 1.3 AGS context registered"
+);
+
+        System.out.println(
+            "LTI 1.3 submission ID created"
+        );
+
+        String ccid = userId;
+
+        
+        PENDING_LOGINS.remove(state);
+
+        System.out.println(
+                "LTI 1.3 Resource Link launch authenticated successfully"
+        );
+
+        System.out.println(
+        "Rendering CodeCheck problem: " + problemId
+);
+
+String document = problemService.launchCodeCheck13(
+        CodeCheck.DEFAULT_REPO,
+        problemId,
+        ccid,
+        submissionId
+);
+
+System.out.println(
+        "CodeCheck problem HTML created successfully"
+);
+
+return Response.ok(document)
+        .type(MediaType.TEXT_HTML)
+        .build();
+        
+    } catch (Exception e) {
+        System.out.println(
+                "LTI 1.3 launch JWT verification failed: "
+                + e.getMessage()
+        );
+
+        return Response.status(Response.Status.UNAUTHORIZED)
+                .entity("JWT verification failed")
+                .build();
+    }
+}
+
 }
