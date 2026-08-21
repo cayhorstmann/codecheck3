@@ -60,12 +60,10 @@ public class LTI13Controller {
             new ConcurrentHashMap<>();
 
     private record PendingLogin(
-        String nonce,
-        String targetLinkUri,
-        String issuer,
-        String clientId,
-        Instant createdAt) {
-
+            String nonce,
+            String clientId,
+            String targetLinkUri,
+            Instant createdAt) {
     }
 
     @POST
@@ -77,8 +75,7 @@ public class LTI13Controller {
         @FormParam("target_link_uri") String targetLinkUri,
         @FormParam("client_id") String incomingClientId,
         @FormParam("lti_message_hint") String messageHint,
-        @FormParam("lti_deployment_id") String deploymentId) {
-
+        @FormParam("lti_deployment_id") String deploymentId) {        
         System.out.println("LTI 1.3 login initiation was received");
         System.out.println("Issuer: " + issuer);
         System.out.println("Incoming client ID: " + incomingClientId);
@@ -87,11 +84,13 @@ public class LTI13Controller {
         System.out.println("Login hint was present: " + (loginHint != null));
         System.out.println("Message hint was present: " + (messageHint != null));
 
-        if (issuer == null || issuer.isBlank()) {
+        /*
+        if (!LTI13Platform.ISSUER.equals(issuer)) {
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity("The issuer parameter was missing.")
                 .build();
         }
+                     */
 
         URI issuerUri;
         
@@ -313,6 +312,7 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
 
                 <input type="hidden" name="deep_link_return_url" value="%s">
                 <input type="hidden" name="deployment_id" value="%s">
+                <input type="hidden" name="client_id" value="%s">
                 <input type="hidden" name="data" value="%s">
                 
                 <input type="hidden" name="platform_issuer" value="%s">
@@ -324,12 +324,19 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
         </body>
         </html>
         """.formatted(
+<<<<<<< HEAD
         deepLinkReturnUrl,
         deploymentId,
         deepLinkData == null ? "" : deepLinkData,
         pending.issuer(),
         pending.clientId(),
         toolBaseUrl
+=======
+            deepLinkReturnUrl,
+            deploymentId,
+            pending.clientId(),
+            deepLinkData == null ? "" : deepLinkData
+>>>>>>> e81679d5beef65198d03201e9618b21fa3ac3fcd
 );
 
 return Response.ok(html)
@@ -402,8 +409,7 @@ return Response.ok(html)
 
     String responseJwt =
         deepLinkResponseService.createResponseJwt(
-                clientId,
-                platformIssuer,
+            clientId,
                 deploymentId,
                 contentItems,
                 deepLinkData
@@ -458,14 +464,14 @@ return Response.ok(returnHtml)
 }
 
    @POST
-   @Path("/problem/{problemId}")
+   @Path("/problem")
    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
    @Produces(MediaType.TEXT_HTML)
    public Response problemLaunch(
-        @PathParam("problemId") String problemId,
         @FormParam("state") String state,
         @FormParam("id_token") String idToken) {
 
+    var problemId = "TODO: get from state or id_token"; // Placeholder for actual problem ID extraction logic
     System.out.println("LTI 1.3 problem launch endpoint was reached");
     System.out.println("Problem ID: " + problemId);
     System.out.println("State was present: " + (state != null));

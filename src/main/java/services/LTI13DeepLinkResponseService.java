@@ -18,7 +18,6 @@ public class LTI13DeepLinkResponseService {
 
 public String createResponseJwt(
         String clientId,
-        String platformIssuer,
         String deploymentId,
         List<Map<String, Object>> contentItems,
         String deepLinkData) {
