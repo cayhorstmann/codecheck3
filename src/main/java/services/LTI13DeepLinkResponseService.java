@@ -29,7 +29,7 @@ public String createResponseJwt(
     var builder = Jwts.builder()
             .issuer(clientId)
             .audience()
-                .add(platformIssuer)
+                .add(LTI13Platform.ISSUER)
                 .and()
             .issuedAt(Date.from(now))
             .expiration(Date.from(now.plusSeconds(300)))

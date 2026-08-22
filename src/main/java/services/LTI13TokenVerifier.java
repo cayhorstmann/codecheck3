@@ -22,9 +22,9 @@ public class LTI13TokenVerifier {
     private final ObjectMapper mapper = new ObjectMapper();
 
     public Claims verify(
-        String idToken,
-        String issuer) throws Exception {
-
+        String idToken) 
+         throws Exception {
+         
         String[] parts = idToken.split("\\.");
         JsonNode header = mapper.readTree(
                 Base64.getUrlDecoder().decode(parts[0])
@@ -32,14 +32,9 @@ public class LTI13TokenVerifier {
 
         String kid = header.get("kid").asText();
 
-        String jwksEndpoint =
-                issuer.replaceAll("/+$", "")
-                + "/mod/lti/certs.php";
         
-        System.out.println("JWKS endpoint: " + jwksEndpoint);
-
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(jwksEndpoint))
+                .uri(URI.create(LTI13Platform.JWKS_ENDPOINT))
                 .GET()
                 .build();
 

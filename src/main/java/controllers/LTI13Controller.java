@@ -143,7 +143,6 @@ public class LTI13Controller {
         new PendingLogin(
                 nonce,
                 targetLinkUri,
-                issuer,
                 clientId,
                 Instant.now()
         )
@@ -205,9 +204,7 @@ UriBuilder authorizationRequest = UriBuilder
 }
 
     try {
-        var claims = tokenVerifier.verify(
-            idToken,
-            pending.issuer()
+        var claims = tokenVerifier.verify( idToken
 );
 
         String deploymentId = claims.get(
@@ -283,7 +280,6 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
 }
 
         System.out.println("JWT signature verified");
-        System.out.println("Issuer: " + claims.getIssuer());
 
         URI targetUri = URI.create(pending.targetLinkUri());
 
@@ -324,19 +320,10 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
         </body>
         </html>
         """.formatted(
-<<<<<<< HEAD
-        deepLinkReturnUrl,
-        deploymentId,
-        deepLinkData == null ? "" : deepLinkData,
-        pending.issuer(),
-        pending.clientId(),
-        toolBaseUrl
-=======
             deepLinkReturnUrl,
             deploymentId,
             pending.clientId(),
             deepLinkData == null ? "" : deepLinkData
->>>>>>> e81679d5beef65198d03201e9618b21fa3ac3fcd
 );
 
 return Response.ok(html)
@@ -524,25 +511,13 @@ return Response.ok(returnHtml)
     try {
         
         var claims = tokenVerifier.verify(
-                idToken,
-                pending.issuer()
+                idToken
         );
 
         System.out.println("JWT signature verified");
 
         
         
-        String returnedIssuer = claims.getIssuer();
-
-        System.out.println("Returned issuer: " + returnedIssuer);
-        System.out.println("Issuer matched: "
-                + pending.issuer().equals(returnedIssuer));
-
-        if (!pending.issuer().equals(returnedIssuer)) {
-            return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity("Issuer mismatch")
-                    .build();
-        }
 
         
         String returnedNonce = claims.get("nonce", String.class);
@@ -765,7 +740,7 @@ if (lineItemId == null
 
         String submissionId =
             "lti13:"
-            + pending.issuer()
+            //TODO + pending.issuer()
             + ":"
             + resourceLinkId
             + ":"
