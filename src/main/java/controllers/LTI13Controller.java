@@ -66,6 +66,22 @@ public class LTI13Controller {
             Instant createdAt) {
     }
 
+    /*
+
+    Moodle sends a POST request to the /login endpoint in two cases:
+    1. When the instructor adds the CodeCheck activity to a course
+    2. When a student clicks on the CodeCheck activity link in the course
+
+    Either way, the request contains:
+        - iss: The issuer of the LTI platform (Moodle, Canvas, etc.)
+        - login_hint: A hint for the login process that goes back to the platform
+        - target_link_uri: The URL to which the platform will redirect after login
+        - client_id: The client ID of the LTI tool (CodeCheck)
+        - lti_message_hint: A hint for the LTI message
+        - lti_deployment_id: The deployment ID of the LTI tool
+    
+    */
+
     @POST
     @Path("/login")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -84,14 +100,6 @@ public class LTI13Controller {
         System.out.println("Login hint was present: " + (loginHint != null));
         System.out.println("Message hint was present: " + (messageHint != null));
 
-        /*
-        if (!LTI13Platform.ISSUER.equals(issuer)) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                .entity("The issuer parameter was missing.")
-                .build();
-        }
-                     */
-
         URI issuerUri;
         
         try {
@@ -108,7 +116,21 @@ public class LTI13Controller {
             .entity("The issuer must be a valid HTTPS URL.")
             .build();
         }
-            
+
+        /* TODO: The following will only work for Moodle. 
+
+        We need to build a database with key issuer and values for the authorization endpoint, 
+        token endpoint, and JWKS endpoint for each platform we want to support.
+        
+        We need to check that we know the issuer since we need to know the 
+        authorization endpoint, token endpoint, and JWKS endpoint for that issuer.
+
+        To set these up, there is a dynamic registration process that we could implement. 
+
+        */
+
+
+
         String authorizationEndpoint =
             issuer.replaceAll("/+$", "")
             + "/mod/lti/auth.php";
@@ -145,12 +167,12 @@ public class LTI13Controller {
                 targetLinkUri,
                 clientId,
                 Instant.now()
-        )
-);
+                )
+        );
 
-String redirectUri = targetLinkUri;
+        String redirectUri = targetLinkUri;
 
-UriBuilder authorizationRequest = UriBuilder
+        UriBuilder authorizationRequest = UriBuilder
         .fromUri(authorizationEndpoint)
         .queryParam("scope", "openid")
         .queryParam("response_type", "id_token")
@@ -162,16 +184,17 @@ UriBuilder authorizationRequest = UriBuilder
         .queryParam("state", state)
         .queryParam("nonce", nonce);
 
+        // TODO: Shouldn't we encode all query parameters? The UriBuilder should handle this, but we need to check.
         if (messageHint != null && !messageHint.isBlank()) {
                 String encodedMessageHint = java.net.URLEncoder.encode(
                         messageHint,
                         java.nio.charset.StandardCharsets.UTF_8
-    );
-        authorizationRequest.queryParam(
-            "lti_message_hint",
-            encodedMessageHint
-    );
-}
+                );
+                authorizationRequest.queryParam(
+                "lti_message_hint",
+                encodedMessageHint
+                );
+        }
         System.out.println("OIDC redirect URI: " + redirectUri);
 
         URI redirect = authorizationRequest.buildFromEncoded();
@@ -288,7 +311,8 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
             + "://"
             + targetUri.getAuthority();
 
-        System.out.println("Tool base URL: " + toolBaseUrl);
+        String launchUrl = toolBaseUrl + "/LTI/1.3/launch";
+        System.out.println("Launch URL: " + launchUrl);
 
         PENDING_LOGINS.remove(state);
 
@@ -305,81 +329,48 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
             <form method="POST" action="/LTI/1.3/select-problem">
                 <label for="problemId">CodeCheck Problem ID:</label>
                 <input type="text" id="problemId" name="problem_id" required>
-
-                <input type="hidden" name="deep_link_return_url" value="%s">
+                <input type="hidden" name="client_id" value="%s">
                 <input type="hidden" name="deployment_id" value="%s">
-                <input type="hidden" name="client_id" value="%s">
+                <input type="hidden" name="deep_link_return_url" value="%s">
                 <input type="hidden" name="data" value="%s">
+                <input type="hidden" name="launch_url" value="%s">
                 
-                <input type="hidden" name="platform_issuer" value="%s">
-                <input type="hidden" name="client_id" value="%s">
-                <input type="hidden" name="tool_base_url" value="%s">
-
                 <button type="submit">Use This Problem</button>
             </form>
         </body>
         </html>
         """.formatted(
-            deepLinkReturnUrl,
-            deploymentId,
             pending.clientId(),
-            deepLinkData == null ? "" : deepLinkData
-);
+            deploymentId,
+            deepLinkReturnUrl,
+            deepLinkData == null ? "" : deepLinkData,
+            launchUrl);
 
-return Response.ok(html)
-        .type(MediaType.TEXT_HTML)
-        .build();
-
-    } catch (Exception e) {
-        System.out.println("JWT verification failed: " + e.getMessage());
-
-        return Response.status(Response.Status.UNAUTHORIZED)
-                .entity("JWT verification failed")
+        return Response.ok(html)
+                .type(MediaType.TEXT_HTML)
                 .build();
-    }
-} 
+
+        } catch (Exception e) {
+                System.out.println("JWT verification failed: " + e.getMessage());
+
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("JWT verification failed")
+                        .build();
+        }
+    } 
                 
     @POST
     @Path("/select-problem")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_HTML)
     public Response selectProblem(
+        @FormParam("client_id") String clientId,
+        @FormParam("deployment_id") String deploymentId,
         @FormParam("problem_id") String problemId,
         @FormParam("deep_link_return_url") String deepLinkReturnUrl,
-        @FormParam("deployment_id") String deploymentId,
         @FormParam("data") String deepLinkData,
-        @FormParam("platform_issuer") String platformIssuer,
-        @FormParam("client_id") String clientId,
-        @FormParam("tool_base_url") String toolBaseUrl) {
+        @FormParam("launch_url") String launchUrl) {
 
-    System.out.println("Problem selection received");
-    System.out.println("Platform issuer: " + platformIssuer);
-    System.out.println("Client ID present: "
-    + (clientId != null && !clientId.isBlank()));
-    System.out.println("Problem ID: " + problemId);
-    
-    if (platformIssuer == null || platformIssuer.isBlank()) {
-        return Response.status(Response.Status.BAD_REQUEST)
-            .entity("Missing platform issuer")
-            .build();
-}
-
-    if (clientId == null || clientId.isBlank()) {
-        return Response.status(Response.Status.BAD_REQUEST)
-            .entity("Missing client ID")
-            .build();
-}
-
-    if (toolBaseUrl == null || toolBaseUrl.isBlank()) {
-        return Response.status(Response.Status.BAD_REQUEST)
-            .entity("Missing tool base URL")
-            .build();
-}
-
-    String launchUrl =
-        toolBaseUrl + "/LTI/1.3/launch";
-    
-    System.out.println("Launch URL: " + launchUrl);
     
     Map<String, Object> contentItem = Map.of(
         "type", "ltiResourceLink",
@@ -449,6 +440,9 @@ return Response.ok(returnHtml)
         .type(MediaType.TEXT_HTML)
         .build();
 }
+
+
+        /* TODO: Has this turned into launch??? */
 
    @POST
    @Path("/problem")
