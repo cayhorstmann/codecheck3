@@ -12,14 +12,7 @@ public final class LTI13Platform {
         // Prevent this constants-only class from being instantiated.
     }
 
-    public static final String ISSUER =
-            "https://moodle2.horstmann.com";
-
-    public static final String NAME =
-            "horstmann.com Moodle";
-
-    public static final String CLIENT_ID =
-            "FIBhCbbrFUZi6ng";
+    // TODO: Replace this with the data from the database.
 
     public static final String AUTHORIZATION_ENDPOINT =
             "https://moodle2.horstmann.com/mod/lti/auth.php";

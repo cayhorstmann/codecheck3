@@ -62,6 +62,7 @@ public class LTI13Controller {
     private record PendingLogin(
             String nonce,
             String clientId,
+            String issuer,
             String targetLinkUri,
             Instant createdAt) {
     }
@@ -164,8 +165,9 @@ public class LTI13Controller {
         state,
         new PendingLogin(
                 nonce,
-                targetLinkUri,
                 clientId,
+                issuer,
+                targetLinkUri,
                 Instant.now()
                 )
         );
@@ -305,7 +307,7 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
         System.out.println("JWT signature verified");
 
         URI targetUri = URI.create(pending.targetLinkUri());
-
+        String issuer = pending.issuer();
         String toolBaseUrl =
             targetUri.getScheme()
             + "://"
@@ -330,6 +332,7 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
                 <label for="problemId">CodeCheck Problem ID:</label>
                 <input type="text" id="problemId" name="problem_id" required>
                 <input type="hidden" name="client_id" value="%s">
+                <input type="hidden" name="issuer" value="%s">
                 <input type="hidden" name="deployment_id" value="%s">
                 <input type="hidden" name="deep_link_return_url" value="%s">
                 <input type="hidden" name="data" value="%s">
@@ -341,6 +344,7 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
         </html>
         """.formatted(
             pending.clientId(),
+            issuer,
             deploymentId,
             deepLinkReturnUrl,
             deepLinkData == null ? "" : deepLinkData,
@@ -365,10 +369,11 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
     @Produces(MediaType.TEXT_HTML)
     public Response selectProblem(
         @FormParam("client_id") String clientId,
+        @FormParam("issuer") String issuer,
         @FormParam("deployment_id") String deploymentId,
         @FormParam("problem_id") String problemId,
         @FormParam("deep_link_return_url") String deepLinkReturnUrl,
-        @FormParam("data") String deepLinkData,
+        @FormParam("data") String deepLinkData,        
         @FormParam("launch_url") String launchUrl) {
 
     
@@ -388,9 +393,10 @@ if (deepLinkReturnUrl == null || deepLinkReturnUrl.isBlank()) {
     String responseJwt =
         deepLinkResponseService.createResponseJwt(
             clientId,
-                deploymentId,
-                contentItems,
-                deepLinkData
+            issuer,
+            deploymentId,
+            contentItems,
+            deepLinkData
         );
     System.out.println("Deep Linking Response JWT created: "
         + (responseJwt != null && !responseJwt.isBlank()));

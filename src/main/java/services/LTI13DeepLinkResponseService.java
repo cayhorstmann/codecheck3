@@ -18,6 +18,7 @@ public class LTI13DeepLinkResponseService {
 
 public String createResponseJwt(
         String clientId,
+        String issuer,
         String deploymentId,
         List<Map<String, Object>> contentItems,
         String deepLinkData) {
@@ -29,7 +30,7 @@ public String createResponseJwt(
     var builder = Jwts.builder()
             .issuer(clientId)
             .audience()
-                .add(LTI13Platform.ISSUER)
+                .add(issuer)
                 .and()
             .issuedAt(Date.from(now))
             .expiration(Date.from(now.plusSeconds(300)))
