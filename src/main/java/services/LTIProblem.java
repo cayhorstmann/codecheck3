@@ -42,19 +42,23 @@ public class LTIProblem {
 
     private record LTI13AGSContext(
         String lineItemId,
-        String userId) {
+        String userId,
+        String issuer
+    ) {
 }
 
     public void registerLTI13AGSContext(
         String submissionId,
         String lineItemId,
-        String userId) {
+        String userId,
+        String issuer) {
 
     lti13AgsContexts.put(
             submissionId,
             new LTI13AGSContext(
                     lineItemId,
-                    userId
+                    userId,
+                    issuer
             )
     );
 }
@@ -337,6 +341,7 @@ if (agsContext != null) {
     try {
         String agsToken =
                 agsService.getAccessToken(
+                        agsContext.issuer(),
                         "https://purl.imsglobal.org/spec/lti-ags/scope/score"
                 );
 

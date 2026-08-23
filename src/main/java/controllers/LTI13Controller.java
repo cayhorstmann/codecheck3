@@ -537,6 +537,7 @@ return Response.ok(returnHtml)
                     .build();
         }
 
+        String issuer = pending.issuer();
         
         
         Object messageType = claims.get(
@@ -570,7 +571,7 @@ System.out.println(
         "AGS endpoint claim: " + endpointObject
 );
 
-String agsToken = agsService.getAccessToken(
+String agsToken = agsService.getAccessToken(issuer,
          "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem"
 );
 
@@ -749,7 +750,8 @@ if (lineItemId == null
         problemService.registerLTI13AGSContext(
         submissionId,
         lineItemId,
-        userId
+        userId,
+        issuer
 );
 
 System.out.println(

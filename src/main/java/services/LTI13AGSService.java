@@ -29,7 +29,7 @@ public class LTI13AGSService {
     private final ObjectMapper objectMapper =
             new ObjectMapper();
 
-    public String getAccessToken(String scope) throws Exception {
+    public String getAccessToken(String issuer, String scope) throws Exception {
 
         PrivateKey privateKey =
                 keyService.getPrivateKey();
@@ -38,8 +38,8 @@ public class LTI13AGSService {
 
         String clientAssertion =
                 Jwts.builder()
-                        .issuer(LTI13Platform.CLIENT_ID)
-                        .subject(LTI13Platform.CLIENT_ID)
+                        .issuer(issuer)
+                        .subject(issuer) 
                         .audience()
                             .add(LTI13Platform.ACCESS_TOKEN_ENDPOINT)
                             .and()
