@@ -40,12 +40,13 @@ git clone https://github.com/cayhorstmann/codecheck3
 Some housekeeping:
 
 ```
+cd path/to/codecheck3 # if not already there
+
 sudo useradd -u 1012 -ms /bin/bash comrunner
 
 mkdir -p /opt/codecheck/repo 
 # If this fails, use sudo and give yourself ownership of /opt/codecheck and /opt/codecheck/repo
 
-cd path/to/codecheck3 # if not already there
 chmod +x cli/codecheck
 mkdir cli/lib
 cd cli/lib
@@ -80,13 +81,6 @@ and verify that the contents starts with
 
 ```
 codespace ALL=(ALL) NOPASSWD:ALL 
-```
-
-Run
-
-```
-sudo apt install acl
-sudo setfacl -PRdm u::rwx,g::rx,o::rx /tmp
 ```
 
 Type the following into the terminal without hitting Enter:
@@ -164,7 +158,8 @@ Click on the Run and Debug (triangle and bug) icon on the left. Select Run → A
             "request": "attach",
             "hostName": "localhost",
             "name": "Debug Quarkus application",
-            "port": 5005
+            "port": 5005,
+            "env": { "COMRUN_USER": "codespace" }
         },
         {
             "type": "java",
