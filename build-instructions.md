@@ -721,10 +721,16 @@ These instructions assume that your database is PostgreSQL. If not, you need to 
 
 In `src/main/resources/application-prod.conf`, define
 
-    db.default.url="postgres://username:password@host:database"
+    com.horstmann.codecheck.storage.type=sql
+    quarkus.datasource.jdbc.url=jdbc:postgresql://...
+    quarkus.datasource.username=...
+    quarkus.datasource.password=...
+
+in `application-dev.properties` or `application-prod.properties`
 
 Make sure that 
 
+    com.horstmann.codecheck.storage.local
     com.horstmann.codecheck.s3.region
     com.horstmann.codecheck.dynamodb.region
     
@@ -732,10 +738,13 @@ are *not* defined.
 
 Create tables as follows:
 
-    CREATE TABLE Problems (repo VARCHAR, key VARCHAR, contents BYTEA)
-    CREATE TABLE CodeCheckAssignments (assignmentID VARCHAR, json VARCHAR)
-    CREATE TABLE CodeCheckLTICredentials (oauth_consumer_key VARCHAR, shared_secret VARCHAR)
-    CREATE TABLE CodeCheckComments (assignmentID VARCHAR, workID VARCHAR, comment VARCHAR)
-    CREATE TABLE CodeCheckWork (assignmentID VARCHAR, workID VARCHAR, json VARCHAR)
-    CREATE TABLE CodeCheckSubmissions (submissionID VARCHAR, submittedAt VARCHAR, json VARCHAR)
+    CREATE TABLE Problems (repo VARCHAR, key VARCHAR, contents BYTEA,
+        UNIQUE (repo, key));
+    CREATE TABLE CodeCheckAssignments (assignmentID VARCHAR UNIQUE, json VARCHAR);
+    CREATE TABLE CodeCheckLTICredentials (oauth_consumer_key VARCHAR UNIQUE, shared_secret VARCHAR);
+    CREATE TABLE CodeCheckComments (assignmentID VARCHAR, workID VARCHAR, comment VARCHAR,
+        UNIQUE(assignmentID, workID));
+    CREATE TABLE CodeCheckWork (assignmentID VARCHAR, workID VARCHAR, json VARCHAR,
+        UNIQUE(assignmentID, workID));
+    CREATE TABLE CodeCheckSubmissions (submissionID VARCHAR, submittedAt VARCHAR, json VARCHAR);
 
