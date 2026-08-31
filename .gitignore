@@ -47,3 +47,6 @@ release.properties
 
 # Plugin directory
 /.quarkus/cli/plugins/
+
+# Local LTI 1.3 signing keys
+.secrets/
